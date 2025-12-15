@@ -1,7 +1,7 @@
 // Supabase 환경변수 (HTML에서 전달받음)
 const SUPABASE_URL = window.SUPABASE_URL;
 const SUPABASE_KEY = window.SUPABASE_KEY;
-const API_URL = 'http://localhost:5001/api';
+const API_URL = `${window.location.protocol}//${window.location.hostname}:5001/api`;
 
 // 전역 변수
 let currentDate = new Date();
