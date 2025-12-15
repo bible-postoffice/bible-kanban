@@ -1,0 +1,653 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #f8f9fa;
+    min-height: 100vh;
+    padding: 20px;
+}
+
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: white;
+    padding: 20px 30px;
+    border-radius: 10px;
+    margin-bottom: 30px;
+    box-shadow: 0 2px 8px rgba(0, 174, 167, 0.08);
+    border-left: 4px solid #00AEA7;
+}
+
+header h1 {
+    color: #2c3e50;
+    font-size: 28px;
+}
+
+/* 헤더 버튼들 */
+.header-actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #00AEA7 0%, #009990 100%);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 174, 167, 0.2);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #009990 0%, #008580 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 174, 167, 0.35);
+}
+
+.btn-primary:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 6px rgba(0, 174, 167, 0.25);
+}
+
+.btn-secondary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-secondary:hover {
+    background: linear-gradient(135deg, #5568d3 0%, #6339a1 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.35);
+}
+
+.btn-secondary:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 6px rgba(102, 126, 234, 0.25);
+}
+
+/* 달력 섹션 */
+.calendar-section {
+    background: white;
+    border-radius: 10px;
+    padding: 25px;
+    margin-bottom: 30px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    transition: all 0.3s ease;
+}
+
+.calendar-section.hidden {
+    display: none;
+}
+
+.calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.calendar-header h2 {
+    font-size: 22px;
+    color: #2c3e50;
+    font-weight: 600;
+}
+
+.btn-month {
+    background: linear-gradient(135deg, #00AEA7 0%, #009990 100%);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 700;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 6px rgba(0, 174, 167, 0.15);
+}
+
+.btn-month:hover {
+    background: linear-gradient(135deg, #009990 0%, #008580 100%);
+    transform: scale(1.05);
+    box-shadow: 0 3px 10px rgba(0, 174, 167, 0.3);
+}
+
+.btn-month:active {
+    transform: scale(0.98);
+}
+
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+}
+
+.calendar-day-header {
+    text-align: center;
+    font-weight: 600;
+    color: #2c3e50;
+    padding: 12px 0;
+    background: #f8f9fa;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+.calendar-day {
+    min-height: 120px;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    padding: 8px;
+    background: white;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.calendar-day:hover {
+    border-color: #00AEA7;
+    box-shadow: 0 2px 8px rgba(0, 174, 167, 0.15);
+}
+
+.calendar-day.other-month {
+    background: #f8f9fa;
+    opacity: 0.5;
+}
+
+.calendar-day.today {
+    border-color: #00AEA7;
+    background: #e6f7f6;
+    box-shadow: 0 0 0 2px rgba(0, 174, 167, 0.1);
+}
+
+.day-number {
+    font-weight: 600;
+    color: #2c3e50;
+    font-size: 14px;
+    margin-bottom: 6px;
+}
+
+.calendar-day.today .day-number {
+    color: #00AEA7;
+    font-weight: 700;
+    font-size: 16px;
+}
+
+.calendar-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.calendar-card {
+    padding: 6px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    border-left: 3px solid #00AEA7;
+    background: white;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    transition: all 0.2s ease;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.calendar-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(0, 174, 167, 0.2);
+}
+
+.calendar-card-title {
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 2px;
+}
+
+.calendar-card-meta {
+    display: flex;
+    gap: 4px;
+    font-size: 10px;
+}
+
+/* 칸반 섹션 */
+.kanban-section {
+    margin-top: 30px;
+}
+
+.kanban-container {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+}
+
+.kanban-column {
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    min-height: 500px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+.kanban-column h2 {
+    font-size: 18px;
+    margin-bottom: 15px;
+    color: #2c3e50;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.cards-container {
+    min-height: 400px;
+}
+
+.card {
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    cursor: move;
+    border: 1px solid #e9ecef;
+    border-left: 3px solid #00AEA7;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    transition: all 0.3s ease;
+}
+
+.card:hover {
+    box-shadow: 0 4px 12px rgba(0, 174, 167, 0.12);
+    transform: translateY(-2px);
+}
+
+.card-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.issue-icon {
+    font-size: 16px;
+}
+
+.priority-badge {
+    font-size: 18px;
+}
+
+.card-title {
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #2c3e50;
+}
+
+.card-description {
+    font-size: 14px;
+    color: #5a6c7d;
+    margin-bottom: 10px;
+}
+
+.card-meta {
+    display: flex;
+    gap: 10px;
+    font-size: 12px;
+    flex-wrap: wrap;
+}
+
+.card-assignee {
+    background: #e6f7f6;
+    color: #00AEA7;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-weight: 500;
+}
+.git-issue {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 11px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    box-shadow: 0 2px 4px rgba(102, 126, 234, 0.15);
+    transition: all 0.2s ease;
+}
+
+.git-issue:hover {
+    box-shadow: 0 3px 6px rgba(102, 126, 234, 0.25);
+    transform: translateY(-1px);
+}
+
+.card-label {
+    background: #f0f0f0;
+    color: #5a6c7d;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-weight: 500;
+}
+
+.card-due-date {
+    font-size: 12px;
+    color: #5a6c7d;
+    margin-top: 8px;
+}
+
+.card-due-date.overdue {
+    color: #e74c3c;
+    font-weight: 600;
+}
+
+.card-due-date.today {
+    color: #f39c12;
+    font-weight: 600;
+}
+
+.card-actions {
+    margin-top: 10px;
+    display: flex;
+    gap: 8px;
+}
+
+/* 모달 */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(4px);
+}
+
+.modal-content {
+    background-color: white;
+    margin: 5% auto;           /* 상단 여백 축소 */
+    padding: 30px;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 500px;
+    max-height: 90vh;          /* 화면 높이의 90% 제한 */
+    overflow-y: auto;          /* 세로 스크롤 활성화 */
+    box-shadow: 0 8px 24px rgba(0, 174, 167, 0.15);
+}
+
+
+.modal-large {
+    max-width: 800px;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: color 0.3s ease;
+}
+
+.close:hover {
+    color: #00AEA7;
+}
+
+#cardForm {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+#cardForm input,
+#cardForm textarea,
+#cardForm select {
+    padding: 12px;
+    border: 2px solid #e9ecef;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: border-color 0.3s ease;
+}
+
+#cardForm input:focus,
+#cardForm textarea:focus,
+#cardForm select:focus {
+    outline: none;
+    border-color: #00AEA7;
+    box-shadow: 0 0 0 3px rgba(0, 174, 167, 0.1);
+}
+
+#cardForm textarea {
+    min-height: 100px;
+    resize: vertical;
+}
+
+/* 상세 모달 */
+.detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.detail-title-section {
+    flex: 1;
+}
+
+.detail-title {
+    font-size: 24px;
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: #2c3e50;
+}
+
+.detail-meta {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.meta-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    color: #5a6c7d;
+}
+
+.detail-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.btn-edit {
+    background: linear-gradient(135deg, #00AEA7 0%, #009990 100%);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 6px rgba(0, 174, 167, 0.15);
+    font-weight: 500;
+}
+
+.btn-edit:hover {
+    background: linear-gradient(135deg, #009990 0%, #008580 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(0, 174, 167, 0.25);
+}
+
+.btn-delete {
+    background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 6px rgba(231, 76, 60, 0.15);
+    font-weight: 500;
+}
+
+.btn-delete:hover {
+    background: linear-gradient(135deg, #c0392b 0%, #a93226 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(231, 76, 60, 0.25);
+}
+
+.detail-section {
+    margin-bottom: 25px;
+}
+
+.detail-section h3 {
+    font-size: 16px;
+    margin-bottom: 10px;
+    color: #2c3e50;
+    font-weight: 600;
+}
+
+.detail-description {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 6px;
+    border-left: 3px solid #00AEA7;
+    line-height: 1.6;
+    color: #2c3e50;
+    min-height: 60px;
+}
+
+/* 댓글 */
+.comments-list {
+    max-height: 300px;
+    overflow-y: auto;
+    margin-bottom: 15px;
+}
+
+.comment-item {
+    background: #f8f9fa;
+    padding: 12px;
+    border-radius: 6px;
+    margin-bottom: 10px;
+    border-left: 2px solid #e9ecef;
+}
+
+.comment-author {
+    font-weight: 600;
+    color: #00AEA7;
+    margin-bottom: 4px;
+}
+
+.comment-time {
+    font-size: 12px;
+    color: #95a5a6;
+    margin-bottom: 8px;
+}
+
+.comment-content {
+    color: #2c3e50;
+    line-height: 1.5;
+}
+
+.comment-form {
+    display: flex;
+    gap: 10px;
+}
+
+.comment-input {
+    flex: 1;
+    padding: 10px;
+    border: 2px solid #e9ecef;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: border-color 0.3s ease;
+}
+
+.comment-input:focus {
+    outline: none;
+    border-color: #00AEA7;
+    box-shadow: 0 0 0 3px rgba(0, 174, 167, 0.1);
+}
+
+.btn-comment {
+    background: linear-gradient(135deg, #00AEA7 0%, #009990 100%);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 6px rgba(0, 174, 167, 0.15);
+    font-weight: 500;
+}
+
+.btn-comment:hover {
+    background: linear-gradient(135deg, #009990 0%, #008580 100%);
+    box-shadow: 0 3px 8px rgba(0, 174, 167, 0.25);
+}
+
+
+select {
+    padding: 12px;
+    border: 2px solid #e9ecef;
+    border-radius: 6px;
+    font-size: 14px;
+    background: white;
+    cursor: pointer;
+    transition: border-color 0.3s ease;
+}
+
+select:focus {
+    outline: none;
+    border-color: #00AEA7;
+    box-shadow: 0 0 0 3px rgba(0, 174, 167, 0.1);
+}
+
+/* 스크롤바 스타일 */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #00AEA7;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #009990;
+}

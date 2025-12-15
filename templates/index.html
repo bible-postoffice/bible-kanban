@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kanban + Calendar Board</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+</head>
+<body>
+    <header>
+        <h1>📊 Kanban + Calendar Board</h1>
+        <div class="header-actions">
+            <button id="toggleViewBtn" class="btn-secondary">📅 달력 보기/숨기기</button>
+            <button id="addCardBtn" class="btn-primary">+ 새 카드 추가</button>
+        </div>
+    </header>
+
+    <!-- 달력 섹션 -->
+    <section id="calendarSection" class="calendar-section">
+        <div class="calendar-header">
+            <button id="prevMonth" class="btn-month">◀</button>
+            <h2 id="currentMonth"></h2>
+            <button id="nextMonth" class="btn-month">▶</button>
+        </div>
+        <div class="calendar-grid" id="calendarGrid">
+            <div class="calendar-day-header">일</div>
+            <div class="calendar-day-header">월</div>
+            <div class="calendar-day-header">화</div>
+            <div class="calendar-day-header">수</div>
+            <div class="calendar-day-header">목</div>
+            <div class="calendar-day-header">금</div>
+            <div class="calendar-day-header">토</div>
+            <!-- 날짜 셀은 JavaScript로 생성 -->
+        </div>
+    </section>
+
+    <!-- 칸반 보드 섹션 -->
+    <section class="kanban-section">
+        <div class="kanban-container">
+            <div class="kanban-column">
+                <h2>📝 To Do</h2>
+                <div class="cards-container" id="todo-cards" data-column="todo"></div>
+            </div>
+            <div class="kanban-column">
+                <h2>🚀 In Progress</h2>
+                <div class="cards-container" id="in_progress-cards" data-column="in_progress"></div>
+            </div>
+            <div class="kanban-column">
+                <h2>✅ Done</h2>
+                <div class="cards-container" id="done-cards" data-column="done"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 카드 추가 모달 -->
+    <div id="cardModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>새 카드 추가</h2>
+            <form id="cardForm">
+                <input type="text" id="title" placeholder="제목" required>
+                <textarea id="description" placeholder="설명"></textarea>
+                <input type="text" id="gitIssue" placeholder="Git 이슈 번호 (예: #123, GH-456)">
+                <input type="text" id="assignee" placeholder="담당자">
+                <input type="text" id="label" placeholder="라벨">
+
+                <select id="issueType" required>
+                    <option value="story">📖 Story</option>
+                    <option value="task">✅ Task</option>
+                    <option value="bug">🐛 Bug</option>
+                </select>
+
+                <select id="priority" required>
+                    <option value="highest">🔴 Highest</option>
+                    <option value="high">🟠 High</option>
+                    <option value="medium" selected>🟡 Medium</option>
+                    <option value="low">🟢 Low</option>
+                    <option value="lowest">🔵 Lowest</option>
+                </select>
+
+                <input type="date" id="dueDate" placeholder="마감일">
+
+                <select id="columnName" required>
+                    <option value="todo">To Do</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="done">Done</option>
+                </select>
+
+                <button type="submit" class="btn-primary">추가</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 카드 상세 모달 -->
+    <div id="detailModal" class="modal">
+        <div class="modal-content modal-large">
+            <span class="close" id="closeDetail">&times;</span>
+            <div id="detailContent"></div>
+        </div>
+    </div>
+
+    <script>
+        // Supabase 환경변수 (백엔드에서 전달)
+        window.SUPABASE_URL = "{{ supabase_url }}";
+        window.SUPABASE_KEY = "{{ supabase_key }}";
+    </script>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
