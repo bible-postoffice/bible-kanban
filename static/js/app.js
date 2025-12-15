@@ -6,6 +6,7 @@ const API_URL = 'http://localhost:5001/api';
 // 전역 변수
 let currentDate = new Date();
 let allCards = [];
+let currentView = 'month'; // 월별/주별 뷰 상태
 
 // 모달 관련
 const modal = document.getElementById('cardModal');
@@ -47,14 +48,42 @@ const priorityIcons = {
     lowest: '🔵'
 };
 
-// 달력 관련
+// 뷰 전환 버튼 이벤트 리스너 (버튼이 있을 때만 실행)
+const monthViewBtn = document.getElementById('monthViewBtn');
+const weekViewBtn = document.getElementById('weekViewBtn');
+
+if (monthViewBtn && weekViewBtn) {
+    monthViewBtn.onclick = () => {
+        currentView = 'month';
+        monthViewBtn.classList.add('active');
+        weekViewBtn.classList.remove('active');
+        renderCalendar();
+    };
+
+    weekViewBtn.onclick = () => {
+        currentView = 'week';
+        weekViewBtn.classList.add('active');
+        monthViewBtn.classList.remove('active');
+        renderCalendar();
+    };
+}
+
+// 달력 이전/다음 버튼
 document.getElementById('prevMonth').onclick = () => {
-    currentDate.setMonth(currentDate.getMonth() - 1);
+    if (currentView === 'month') {
+        currentDate.setMonth(currentDate.getMonth() - 1);
+    } else {
+        currentDate.setDate(currentDate.getDate() - 7);
+    }
     renderCalendar();
 };
 
 document.getElementById('nextMonth').onclick = () => {
-    currentDate.setMonth(currentDate.getMonth() + 1);
+    if (currentView === 'month') {
+        currentDate.setMonth(currentDate.getMonth() + 1);
+    } else {
+        currentDate.setDate(currentDate.getDate() + 7);
+    }
     renderCalendar();
 };
 
@@ -96,30 +125,33 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
-// 달력 렌더링
+// 달력 렌더링 (뷰에 따라 분기)
 function renderCalendar() {
+    if (currentView === 'month') {
+        renderMonthView();
+    } else {
+        renderWeekView();
+    }
+}
+
+// 월별 뷰 렌더링
+function renderMonthView() {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
 
-    // 헤더 업데이트
     const monthNames = ['1월', '2월', '3월', '4월', '5월', '6월', 
                         '7월', '8월', '9월', '10월', '11월', '12월'];
     document.getElementById('currentMonth').textContent = `${year}년 ${monthNames[month]}`;
 
-    // 달력 그리드
     const calendarGrid = document.getElementById('calendarGrid');
-
-    // 기존 날짜 셀 제거 (헤더는 유지)
     const dayCells = calendarGrid.querySelectorAll('.calendar-day');
     dayCells.forEach(cell => cell.remove());
 
-    // 이번 달의 첫날과 마지막 날
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
     const startingDayOfWeek = firstDay.getDay();
     const monthLength = lastDay.getDate();
 
-    // 이전 달의 마지막 날들
     const prevLastDay = new Date(year, month, 0);
     const prevMonthLength = prevLastDay.getDate();
 
@@ -129,7 +161,6 @@ function renderCalendar() {
     let dayCounter = 1;
     let nextMonthCounter = 1;
 
-    // 총 42칸 (6주)
     for (let i = 0; i < 42; i++) {
         const dayCell = document.createElement('div');
         dayCell.className = 'calendar-day';
@@ -139,17 +170,14 @@ function renderCalendar() {
         let isOtherMonth = false;
 
         if (i < startingDayOfWeek) {
-            // 이전 달
             dayNumber = prevMonthLength - startingDayOfWeek + i + 1;
             currentCellDate = new Date(year, month - 1, dayNumber);
             isOtherMonth = true;
         } else if (dayCounter <= monthLength) {
-            // 현재 달
             dayNumber = dayCounter;
             currentCellDate = new Date(year, month, dayNumber);
             dayCounter++;
         } else {
-            // 다음 달
             dayNumber = nextMonthCounter;
             currentCellDate = new Date(year, month + 1, dayNumber);
             nextMonthCounter++;
@@ -160,18 +188,15 @@ function renderCalendar() {
             dayCell.classList.add('other-month');
         }
 
-        // 오늘 표시
         if (currentCellDate.getTime() === today.getTime()) {
             dayCell.classList.add('today');
         }
 
-        // 날짜 번호
         const dayNumberDiv = document.createElement('div');
         dayNumberDiv.className = 'day-number';
         dayNumberDiv.textContent = dayNumber;
         dayCell.appendChild(dayNumberDiv);
 
-        // 카드 컨테이너
         const cardsDiv = document.createElement('div');
         cardsDiv.className = 'calendar-cards';
         cardsDiv.dataset.date = currentCellDate.toISOString().split('T')[0];
@@ -180,30 +205,89 @@ function renderCalendar() {
         calendarGrid.appendChild(dayCell);
     }
 
-    // 카드 배치
+    renderCalendarCards();
+}
+
+// 주별 뷰 렌더링
+function renderWeekView() {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    const date = currentDate.getDate();
+
+    const currentDay = new Date(year, month, date);
+    const dayOfWeek = currentDay.getDay();
+    const startOfWeek = new Date(currentDay);
+    startOfWeek.setDate(date - dayOfWeek);
+
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+
+    const monthNames = ['1월', '2월', '3월', '4월', '5월', '6월', 
+                        '7월', '8월', '9월', '10월', '11월', '12월'];
+    const startMonth = startOfWeek.getMonth();
+    const endMonth = endOfWeek.getMonth();
+    
+    if (startMonth === endMonth) {
+        document.getElementById('currentMonth').textContent = 
+            `${startOfWeek.getFullYear()}년 ${monthNames[startMonth]} ${startOfWeek.getDate()}일 - ${endOfWeek.getDate()}일`;
+    } else {
+        document.getElementById('currentMonth').textContent = 
+            `${monthNames[startMonth]} ${startOfWeek.getDate()}일 - ${monthNames[endMonth]} ${endOfWeek.getDate()}일`;
+    }
+
+    const calendarGrid = document.getElementById('calendarGrid');
+    const dayCells = calendarGrid.querySelectorAll('.calendar-day');
+    dayCells.forEach(cell => cell.remove());
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    for (let i = 0; i < 7; i++) {
+        const currentCellDate = new Date(startOfWeek);
+        currentCellDate.setDate(startOfWeek.getDate() + i);
+
+        const dayCell = document.createElement('div');
+        dayCell.className = 'calendar-day week-view';
+
+        if (currentCellDate.getTime() === today.getTime()) {
+            dayCell.classList.add('today');
+        }
+
+        const dayNumberDiv = document.createElement('div');
+        dayNumberDiv.className = 'day-number';
+        const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+        dayNumberDiv.textContent = `${dayNames[i]} ${currentCellDate.getDate()}`;
+        dayCell.appendChild(dayNumberDiv);
+
+        const cardsDiv = document.createElement('div');
+        cardsDiv.className = 'calendar-cards';
+        cardsDiv.dataset.date = currentCellDate.toISOString().split('T')[0];
+        dayCell.appendChild(cardsDiv);
+
+        calendarGrid.appendChild(dayCell);
+    }
+
     renderCalendarCards();
 }
 
 // 달력에 카드 배치
 function renderCalendarCards() {
-    // 모든 카드 컨테이너 초기화
     document.querySelectorAll('.calendar-cards').forEach(c => c.innerHTML = '');
 
-    // 마감일이 있는 카드만 필터링
     const cardsWithDueDate = allCards.filter(card => card.due_date);
 
     cardsWithDueDate.forEach(card => {
-        const dueDate = card.due_date.split('T')[0]; // YYYY-MM-DD 형식
+        const dueDate = card.due_date.split('T')[0];
         const cardContainer = document.querySelector(`.calendar-cards[data-date="${dueDate}"]`);
 
-if (cardContainer) {
-    const calendarCard = document.createElement('div');  // ⭐ 추가
-    calendarCard.className = 'calendar-card';
-    const cardId = card.id;
-    
-    calendarCard.onclick = (e) => {
+        if (cardContainer) {
+            const calendarCard = document.createElement('div');
+            calendarCard.className = 'calendar-card';
+            const cardId = card.id;
+            
+            calendarCard.onclick = (e) => {
                 e.stopPropagation();
-                showCardDetail(cardId);  // 저장된 변수 사용
+                showCardDetail(cardId);
             };
 
             calendarCard.innerHTML = `
@@ -225,19 +309,14 @@ async function loadCards() {
     const cards = await response.json();
     allCards = cards;
 
-    // 컬럼 초기화
     document.querySelectorAll('.cards-container').forEach(c => c.innerHTML = '');
 
-    // 카드 렌더링
     cards.forEach(card => {
         const cardElement = createCardElement(card);
         document.getElementById(`${card.column_name}-cards`).appendChild(cardElement);
     });
 
-    // 달력 렌더링
     renderCalendar();
-
-    // Sortable 초기화
     initSortable();
 }
 
@@ -247,7 +326,6 @@ function createCardElement(card) {
     div.dataset.id = card.id;
     div.onclick = () => showCardDetail(card.id);
 
-    // 마감일 체크
     let dueDateHtml = '';
     if (card.due_date) {
         const dueDate = new Date(card.due_date);
@@ -278,7 +356,7 @@ function createCardElement(card) {
         <div class="card-title">${card.title}</div>
         <div class="card-description">${card.description || ''}</div>
         <div class="card-meta">
-            ${card.assignee ? `<span class="card-assignee">👤 ${card.assignee}</span>` : ''},
+            ${card.assignee ? `<span class="card-assignee">👤 ${card.assignee}</span>` : ''}
             ${card.git_issue ? `<span class="meta-item">🔗 ${card.git_issue}</span>` : ''}
         </div>
         ${dueDateHtml}
@@ -287,7 +365,6 @@ function createCardElement(card) {
     return div;
 }
 
-// Sortable 초기화
 function initSortable() {
     document.querySelectorAll('.cards-container').forEach(container => {
         new Sortable(container, {
@@ -310,7 +387,6 @@ function initSortable() {
     });
 }
 
-// 카드 상세 보기
 async function showCardDetail(cardId) {
     const response = await fetch(`${API_URL}/cards/${cardId}`);
     const card = await response.json();
@@ -365,7 +441,6 @@ async function showCardDetail(cardId) {
     detailModal.style.display = 'block';
 }
 
-// 댓글 추가
 async function addComment(cardId) {
     const author = document.getElementById('commentAuthor').value;
     const content = document.getElementById('commentContent').value;
@@ -385,7 +460,6 @@ async function addComment(cardId) {
     showCardDetail(cardId);
 }
 
-// 카드 추가
 cardForm.onsubmit = async (e) => {
     e.preventDefault();
 
@@ -412,7 +486,6 @@ cardForm.onsubmit = async (e) => {
     await loadCards();
 };
 
-// 카드 삭제
 async function deleteCard(cardId) {
     if (!confirm('정말 삭제하시겠습니까?')) return;
 
@@ -425,10 +498,8 @@ async function deleteCard(cardId) {
     await loadCards();
 }
 
-// 카드 수정
 function editCard(cardId) {
     alert('수정 기능은 추후 구현 예정입니다');
 }
 
-// 초기 로드
 loadCards();
