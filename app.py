@@ -58,42 +58,63 @@ def get_card(card_id):
 # 카드 생성
 @app.route('/api/cards', methods=['POST'])
 def create_card():
-    data = request.json
-
-    # 데이터베이스에 있는 컬럼만 사용
-    card_data = {
-        'title': data.get('title'),
-        'description': data.get('description', ''),
-        'column_name': data.get('column_name', 'todo'),
-        'assignee': data.get('assignee', ''),
-        'issue_type': data.get('issue_type', 'task'),
-        'git_issue': data.get('git_issue', ''),
-        'priority': data.get('priority', 'medium'),
-        'due_date': data.get('due_date', None),
-        'position': data.get('position', 0)
-    }
-
-    # labels 컬럼이 있으면 추가 (없으면 제외)
-    if 'label' in data:
-        card_data['label'] = data['label']
-
-    response = supabase.table('kanban_cards').insert(card_data).execute()
-    return jsonify(response.data[0]), 201
+    try:
+        data = request.json
+        print(f"받은 데이터: {data}")
+        
+        card_data = {
+            'title': data.get('title'),
+            'description': data.get('description'),
+            'git_issue': data.get('git_issue'),
+            'assignee': data.get('assignee'),
+            'issue_type': data.get('issue_type'),
+            'priority': data.get('priority'),
+            'column_name': data.get('column_name', 'todo')
+        }
+        
+        # 날짜 필드 처리 - 빈 문자열이면 포함하지 않음
+        start_date = data.get('start_date')
+        if start_date and start_date.strip():
+            card_data['start_date'] = start_date
+            
+        end_date = data.get('end_date')
+        if end_date and end_date.strip():
+            card_data['end_date'] = end_date
+        
+        # label 처리
+        label = data.get('label')
+        if label and label.strip():
+            card_data['label'] = label
+        
+        print(f"저장할 데이터: {card_data}")
+        
+        response = supabase.table('kanban_cards').insert(card_data).execute()
+        return jsonify(response.data[0]), 201
+        
+    except Exception as e:
+        print(f"Error creating card: {e}")
+        return jsonify({'error': str(e)}), 500
 
 # 카드 업데이트 (PATCH 추가!)
 @app.route('/api/cards/<int:card_id>', methods=['PUT', 'PATCH'])
 def update_card(card_id):
-    data = request.json
-    response = supabase.table('kanban_cards')\
-        .update(data)\
-        .eq('id', card_id)\
-        .execute()
-    
-    if response.data and len(response.data) > 0:
-        return jsonify(response.data[0])
-    else:
-        return jsonify({'error': 'Card not found'}), 404
-
+    try:
+        data = request.json
+        
+        # 업데이트할 데이터 준비
+        update_data = {}
+        
+        for key in ['title', 'description', 'git_issue', 'assignee', 'label', 
+                    'issue_type', 'priority', 'column_name', 'start_date', 'end_date']:
+            if key in data:
+                update_data[key] = data[key]
+        
+        response = supabase.table('kanban_cards').update(update_data).eq('id', card_id).execute()
+        return jsonify(response.data[0]), 200
+        
+    except Exception as e:
+        print(f"Error updating card: {e}")
+        return jsonify({'error': str(e)}), 500
 # 카드 삭제
 @app.route('/api/cards/<int:card_id>', methods=['DELETE'])
 def delete_card(card_id):

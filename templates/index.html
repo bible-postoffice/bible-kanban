@@ -87,7 +87,12 @@
                     <option value="lowest">🔵 Lowest</option>
                 </select>
                 
-                <input type="date" id="dueDate">
+                <!-- 시작일/종료일 추가 -->
+                <label for="startDate">시작일</label>
+                <input type="date" id="startDate" name="startDate">
+
+                <label for="dueDate">종료일</label>
+                <input type="date" id="dueDate" name="dueDate">
                 
                 <select id="columnName" required>
                     <option value="todo">To Do</option>
@@ -97,16 +102,60 @@
                 
                 <button type="submit" class="btn-primary">추가</button>
             </form>
+
         </div>
     </div>
 
     <!-- 카드 상세 모달 -->
     <div id="detailModal" class="modal">
-        <div class="modal-content modal-large">
-            <span class="close" id="closeDetail">&times;</span>
-            <div id="detailContent"></div>
-        </div>
+    <div class="modal-content modal-large">
+        <div id="detailContent"></div>
     </div>
+</div>
+
+<!-- 카드 수정 모달 -->
+<div id="editModal" class="modal">
+    <div class="modal-content">
+        <span class="close" id="closeEdit">&times;</span>
+        <h2>카드 수정</h2>
+        <form id="editForm">
+            <input type="hidden" id="editCardId">
+            <input type="text" id="editTitle" placeholder="제목" required>
+            <textarea id="editDescription" placeholder="설명"></textarea>
+            <input type="text" id="editGitIssue" placeholder="Git 이슈 번호">
+            <input type="text" id="editAssignee" placeholder="담당자">
+            <input type="text" id="editLabel" placeholder="라벨">
+            
+            <select id="editIssueType" required>
+                <option value="story">📖 Story</option>
+                <option value="task">✅ Task</option>
+                <option value="bug">🐛 Bug</option>
+            </select>
+            
+            <select id="editPriority" required>
+                <option value="highest">🔴 Highest</option>
+                <option value="high">🟠 High</option>
+                <option value="medium">🟡 Medium</option>
+                <option value="low">🟢 Low</option>
+                <option value="lowest">🔵 Lowest</option>
+            </select>
+            
+            <label for="editStartDate">시작일</label>
+            <input type="date" id="editStartDate">
+            
+            <label for="editDueDate">종료일</label>
+            <input type="date" id="editDueDate">
+            
+            <select id="editColumnName" required>
+                <option value="todo">To Do</option>
+                <option value="inprogress">In Progress</option>
+                <option value="done">Done</option>
+            </select>
+            
+            <button type="submit" class="btn-primary">저장</button>
+        </form>
+    </div>
+</div>
 
     <script>
         window.SUPABASE_URL = "{{ supabase_url }}";

@@ -215,41 +215,89 @@ function renderMonthView() {
 }
 
 // 달력에 카드 배치
+// 달력에 카드 배치
 function renderCalendarCards() {
-    document.querySelectorAll('.calendar-cards').forEach(c => c.innerHTML = '');
-
-    const cardsWithDueDate = allCards.filter(card => card.due_date);
-
-    cardsWithDueDate.forEach(card => {
-        const dueDate = card.due_date.split('T')[0];
-        const cardContainer = document.querySelector(`.calendar-cards[data-date="${dueDate}"]`);
-
-        if (cardContainer) {
-            const calendarCard = document.createElement('div');
-            calendarCard.className = 'calendar-card';
+    allCards.forEach(card => {
+        if (card.start_date && card.end_date) {
+            const start = new Date(card.start_date + 'T00:00:00+09:00');
+            const end = new Date(card.end_date + 'T00:00:00+09:00');
             
-            calendarCard.onclick = (e) => {
-                e.stopPropagation();
-                showCardDetail(card.id);
-            };
-
-            calendarCard.innerHTML = `
-                <div class="calendar-card-title">${issueIcons[card.issue_type]} ${card.title}</div>
-                <div class="calendar-card-meta">
-                    <span>${priorityIcons[card.priority]}</span>
-                    ${card.assignee ? `<span>👤 ${card.assignee}</span>` : ''}
-                </div>
-            `;
-
-            cardContainer.appendChild(calendarCard);
+            // 시작일부터 종료일까지 모든 날짜에 카드 표시
+            for (let date = new Date(start); date <= end; date.setDate(date.getDate() + 1)) {
+                const dateStr = date.toISOString().split('T')[0];
+                const dayCell = document.querySelector(`[data-date="${dateStr}"]`);
+                
+                if (dayCell) {
+                    const cardEl = createCalendarCardElement(card, date, start, end);
+                    dayCell.appendChild(cardEl);
+                }
+            }
         }
+    });
+}
+
+
+// 달력용 카드 요소 생성
+// 달력용 카드 요소 생성
+function createCalendarCardElement(card, currentDate, startDate, endDate) {
+    const cardEl = document.createElement('div');
+    cardEl.className = 'calendar-card';
+    cardEl.onclick = (e) => {
+        e.stopPropagation();
+        showCardDetail(card.id);
+    };
+    
+    // 기간의 시작, 중간, 끝에 따라 클래스 추가
+    const isStart = currentDate.toISOString().split('T')[0] === startDate.toISOString().split('T')[0];
+    const isEnd = currentDate.toISOString().split('T')[0] === endDate.toISOString().split('T')[0];
+    
+    if (isStart && isEnd) {
+        cardEl.classList.add('card-single');
+    } else if (isStart) {
+        cardEl.classList.add('card-start');
+    } else if (isEnd) {
+        cardEl.classList.add('card-end');
+    } else {
+        cardEl.classList.add('card-span');
+    }
+    
+    // 우선순위에 따른 배경색
+    const priorityColors = {
+        highest: '#ffebee',
+        high: '#fff3e0',
+        medium: '#fff9c4',
+        low: '#e8f5e9',
+        lowest: '#e3f2fd'
+    };
+    
+    cardEl.style.backgroundColor = priorityColors[card.priority] || '#f5f5f5';
+    
+    cardEl.innerHTML = `
+        <span class="calendar-card-icon">${issueIcons[card.issue_type]}</span>
+        <span class="calendar-card-title">${card.title}</span>
+        <span class="calendar-card-priority">${priorityIcons[card.priority]}</span>
+    `;
+    
+    return cardEl;
+}
+
+function formatKSTDateTime(utcDateString) {
+    const date = new Date(utcDateString);
+    return date.toLocaleString('ko-KR', {
+        timeZone: 'Asia/Seoul',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
     });
 }
 
 // ========== 카드 로드 ==========
 async function loadCards() {
     try {
-        const response = await fetch('/api/cards');
+        const response = await fetch(`${API_URL}/cards`);  // /api/cards → ${API_URL}/cards
         const cards = await response.json();
         
         console.log('로드된 카드:', cards.length, '개');
@@ -285,6 +333,7 @@ async function loadCards() {
     }
 }
 
+
 // ========== 카드 요소 생성 ==========
 function createCardElement(card) {
     const div = document.createElement('div');
@@ -292,26 +341,67 @@ function createCardElement(card) {
     div.dataset.id = card.id;
     div.onclick = () => showCardDetail(card.id);
 
-    let dueDateHtml = '';
-    if (card.due_date) {
-        const dueDate = new Date(card.due_date);
+    let dateHtml = '';
+    
+    // start_date와 end_date 표시
+    if (card.start_date || card.end_date) {
+        const startDate = card.start_date ? new Date(card.start_date + 'T00:00:00+09:00') : null;
+        const endDate = card.end_date ? new Date(card.end_date + 'T00:00:00+09:00') : null;
+        
+        // 오늘 날짜를 한국 시간으로 가져오기
         const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const dueDateOnly = new Date(dueDate);
-        dueDateOnly.setHours(0, 0, 0, 0);
-
-        let dueDateClass = 'card-due-date';
-        if (dueDateOnly < today) {
-            dueDateClass += ' overdue';
-        } else if (dueDateOnly.getTime() === today.getTime()) {
-            dueDateClass += ' today';
+        const kstToday = new Date(today.toLocaleString('en-US', { timeZone: 'Asia/Seoul' }));
+        kstToday.setHours(0, 0, 0, 0);
+        
+        let dateClass = 'card-due-date';
+        let dateText = '';
+        
+        // 날짜 텍스트 생성
+        if (startDate && endDate) {
+            const start = startDate.toLocaleDateString('ko-KR', { 
+                timeZone: 'Asia/Seoul',
+                month: 'numeric', 
+                day: 'numeric' 
+            });
+            const end = endDate.toLocaleDateString('ko-KR', { 
+                timeZone: 'Asia/Seoul',
+                month: 'numeric', 
+                day: 'numeric' 
+            });
+            
+            if (card.start_date === card.end_date) {
+                dateText = `📅 ${start}`;
+            } else {
+                dateText = `📅 ${start} ~ ${end}`;
+            }
+            
+            // 종료일 기준으로 색상 결정
+            const endDateOnly = new Date(endDate);
+            endDateOnly.setHours(0, 0, 0, 0);
+            
+            if (endDateOnly < kstToday) {
+                dateClass += ' overdue';
+            } else if (endDateOnly.getTime() === kstToday.getTime()) {
+                dateClass += ' today';
+            }
+        } else if (startDate) {
+            dateText = `📅 ${startDate.toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul' })}`;
+        } else if (endDate) {
+            dateText = `📅 ~ ${endDate.toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul' })}`;
+            
+            const endDateOnly = new Date(endDate);
+            endDateOnly.setHours(0, 0, 0, 0);
+            
+            if (endDateOnly < kstToday) {
+                dateClass += ' overdue';
+            } else if (endDateOnly.getTime() === kstToday.getTime()) {
+                dateClass += ' today';
+            }
         }
-
-        dueDateHtml = `
-            <div class="${dueDateClass}">
-                📅 ${dueDate.toLocaleDateString('ko-KR')}
-            </div>
-        `;
+        
+        if (dateText) {
+            dateHtml = `<div class="${dateClass}">${dateText}</div>`;
+        }
     }
 
     div.innerHTML = `
@@ -325,11 +415,13 @@ function createCardElement(card) {
             ${card.assignee ? `<span class="card-assignee">👤 ${card.assignee}</span>` : ''}
             ${card.git_issue ? `<span class="meta-item">🔗 ${card.git_issue}</span>` : ''}
         </div>
-        ${dueDateHtml}
+        ${dateHtml}
     `;
 
     return div;
 }
+
+
 
 // ========== Sortable 초기화 ==========
 function initializeSortable() {
@@ -341,7 +433,7 @@ function initializeSortable() {
                 const cardId = evt.item.dataset.id;
                 const newColumn = evt.to.dataset.column;
 
-                await fetch(`/api/cards/${cardId}`, {
+                await fetch(`${API_URL}/cards/${cardId}`, {  // /api → ${API_URL}
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ column_name: newColumn })
@@ -354,49 +446,151 @@ function initializeSortable() {
     });
 }
 
+
 // ========== 카드 상세 보기 ==========
 async function showCardDetail(cardId) {
     try {
-        const response = await fetch(`/api/cards/${cardId}`);
+        const response = await fetch(`${API_URL}/cards/${cardId}`);
         const card = await response.json();
         
         const modal = document.getElementById('detailModal');
         const content = document.getElementById('detailContent');
         
-        content.innerHTML = `
-            <div class="detail-header">
-                <div class="detail-title-section">
-                    <h2 class="detail-title">
-                        ${issueIcons[card.issue_type] || ''} 
-                        ${card.title}
-                    </h2>
-                    <div class="detail-meta">
-                        <span class="priority-badge">${priorityIcons[card.priority] || ''}</span>
-                        ${card.assignee ? `<span class="card-assignee">👤 ${card.assignee}</span>` : ''}
-                        ${card.git_issue ? `<span class="git-issue">🔗 ${card.git_issue}</span>` : ''}
-                        ${card.due_date ? `<span class="meta-item">📅 ${card.due_date}</span>` : ''}
+        // 날짜 포맷팅
+        let dateText = '';
+        if (card.start_date || card.end_date) {
+            const startDate = card.start_date ? new Date(card.start_date + 'T00:00:00+09:00') : null;
+            const endDate = card.end_date ? new Date(card.end_date + 'T00:00:00+09:00') : null;
+            
+            if (startDate && endDate) {
+                if (card.start_date === card.end_date) {
+                    dateText = startDate.toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul' });
+                } else {
+                    dateText = `${startDate.toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul' })} ~ ${endDate.toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul' })}`;
+                }
+            } else if (startDate) {
+                dateText = `시작: ${startDate.toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul' })}`;
+            } else if (endDate) {
+                dateText = `종료: ${endDate.toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul' })}`;
+            }
+        }
+        
+        // 설명 정리
+        let description = '설명이 없습니다.';
+        if (card.description) {
+            description = card.description.trim();
+        }
+        
+        // HTML 생성
+        let html = `
+            <div class="modal-detail-wrapper">
+                <span class="close" id="closeDetail">&times;</span>
+                
+                <div class="modal-detail-header">
+                    <h1 class="modal-detail-title">
+                        ${issueIcons[card.issue_type] || '✅'} ${card.title}
+                    </h1>
+                </div>
+                
+                <div class="modal-detail-meta">`;
+        
+        if (card.priority) {
+            html += `<span class="detail-meta-badge priority">${priorityIcons[card.priority] || '🟡'}</span>`;
+        }
+        
+        if (card.assignee) {
+            html += `<span class="detail-meta-badge assignee">👤 ${card.assignee}</span>`;
+        }
+        
+        if (card.label) {
+            html += `<span class="detail-meta-badge label">🏷️ ${card.label}</span>`;
+        }
+        
+        if (card.git_issue) {
+            html += `<span class="detail-meta-badge git">🔗 ${card.git_issue}</span>`;
+        }
+        
+        if (dateText) {
+            html += `<span class="detail-meta-badge date">📅 ${dateText}</span>`;
+        }
+        
+        html += `
+                </div>
+                
+                <div class="modal-detail-body">
+                    <div class="modal-detail-section">
+                        <h3 class="section-title">📝 설명</h3>
+                        <div class="section-content">${description}</div>
                     </div>
                 </div>
-                <div class="detail-actions">
-                    <button class="btn-edit" onclick="editCard(${card.id})">✏️ 수정</button>
-                    ${card.column_name === 'done' ? `
-                        <button class="btn-archive" onclick="archiveCard(${card.id})">📦 보관</button>
-                    ` : ''}
+                
+                <div class="modal-detail-footer">
+                    <button class="btn-edit" onclick="editCard(${card.id})">✏️ 수정</button>`;
+        
+        if (card.column_name === 'done') {
+            html += `<button class="btn-archive" onclick="archiveCard(${card.id})">📦 보관</button>`;
+        }
+        
+        html += `
                     <button class="btn-delete" onclick="deleteCard(${card.id})">🗑️ 삭제</button>
-                </div>
-            </div>
-            
-            <div class="detail-section">
-                <h3>📝 설명</h3>
-                <div class="detail-description">
-                    ${card.description || '설명이 없습니다.'}
                 </div>
             </div>
         `;
         
+        content.innerHTML = html;
+        
+        const closeBtn = document.getElementById('closeDetail');
+        if (closeBtn) {
+            closeBtn.onclick = closeDetailModal;
+        }
+        
         modal.style.display = 'block';
     } catch (error) {
         console.error('카드 상세 정보 로드 실패:', error);
+        alert('카드 정보를 불러오는데 실패했습니다.');
+    }
+}
+
+
+
+
+
+// ========== 카드 수정 ==========
+async function editCard(cardId) {
+    try {
+        // 카드 데이터 가져오기
+        const response = await fetch(`${API_URL}/cards/${cardId}`);
+        const card = await response.json();
+        
+        // 상세 모달 닫기
+        closeDetailModal();
+        
+        // 수정 모달 열기
+        const editModal = document.getElementById('editModal');
+         const closeEditModal = editModal ? editModal.querySelector('.close') : null;
+    
+        if (closeEditModal) {
+            closeEditModal.addEventListener('click', function() {
+                editModal.style.display = 'none';
+            });
+        }
+        // 폼에 기존 데이터 채우기
+        document.getElementById('editCardId').value = card.id;
+        document.getElementById('editTitle').value = card.title;
+        document.getElementById('editDescription').value = card.description || '';
+        document.getElementById('editGitIssue').value = card.git_issue || '';
+        document.getElementById('editAssignee').value = card.assignee || '';
+        document.getElementById('editLabel').value = card.label || '';
+        document.getElementById('editIssueType').value = card.issue_type;
+        document.getElementById('editPriority').value = card.priority;
+        document.getElementById('editStartDate').value = card.start_date || '';
+        document.getElementById('editDueDate').value = card.end_date || '';
+        document.getElementById('editColumnName').value = card.column_name;
+        
+        editModal.style.display = 'block';
+    } catch (error) {
+        console.error('카드 정보 로드 실패:', error);
+        alert('카드 정보를 불러올 수 없습니다.');
     }
 }
 
@@ -407,7 +601,7 @@ async function archiveCard(cardId) {
     }
     
     try {
-        const response = await fetch(`/api/cards/${cardId}/archive`, {
+        const response = await fetch(`${API_URL}/cards/${cardId}/archive`, {  // /api → ${API_URL}
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -425,12 +619,13 @@ async function archiveCard(cardId) {
     }
 }
 
+
 // ========== 카드 삭제 ==========
 async function deleteCard(cardId) {
     if (!confirm('정말 삭제하시겠습니까?')) return;
 
     try {
-        await fetch(`/api/cards/${cardId}`, {
+        await fetch(`${API_URL}/cards/${cardId}`, {  // /api → ${API_URL}
             method: 'DELETE'
         });
 
@@ -442,10 +637,8 @@ async function deleteCard(cardId) {
     }
 }
 
-// ========== 카드 수정 ==========
-function editCard(cardId) {
-    alert('수정 기능은 추후 구현 예정입니다');
-}
+
+
 
 // ========== 모달 닫기 ==========
 function closeDetailModal() {
@@ -539,45 +732,132 @@ function setupEventListeners() {
             cardModal.style.display = 'none';
         });
     }
-    
     if (cardForm) {
-        cardForm.addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const cardData = {
-                title: document.getElementById('title').value,
-                description: document.getElementById('description').value,
-                git_issue: document.getElementById('gitIssue').value,
-                assignee: document.getElementById('assignee').value,
-                label: document.getElementById('label').value,
-                issue_type: document.getElementById('issueType').value,
-                priority: document.getElementById('priority').value,
-                due_date: document.getElementById('dueDate').value,
-                column_name: document.getElementById('columnName').value
-            };
-            
-            try {
-                const response = await fetch('/api/cards', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(cardData)
-                });
-                
-                if (response.ok) {
-                    cardModal.style.display = 'none';
-                    cardForm.reset();
-                    showNotification('카드가 추가되었습니다');
-                    loadCards();
-                }
-            } catch (error) {
-                console.error('카드 생성 실패:', error);
-                alert('카드 생성에 실패했습니다.');
-            }
-        });
+    cardForm.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const startDateValue = document.getElementById('startDate').value;
+    const endDateValue = document.getElementById('dueDate').value;
+    
+    const cardData = {
+        title: document.getElementById('title').value,
+        description: document.getElementById('description').value,
+        git_issue: document.getElementById('gitIssue').value,
+        assignee: document.getElementById('assignee').value,
+        issue_type: document.getElementById('issueType').value,
+        priority: document.getElementById('priority').value,
+        column_name: document.getElementById('columnName').value
+    };
+    
+    // 날짜가 입력된 경우에만 추가
+    if (startDateValue) {
+        cardData.start_date = startDateValue;
+    }
+    if (endDateValue) {
+        cardData.end_date = endDateValue;
     }
     
+    console.log('전송할 데이터:', cardData);
+    
+    try {
+        const response = await fetch(`${API_URL}/cards`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(cardData)
+        });
+        
+        if (response.ok) {
+            cardModal.style.display = 'none';
+            cardForm.reset();
+            showNotification('카드가 추가되었습니다');
+            loadCards();
+        } else {
+            const error = await response.json();
+            console.error('에러:', error);
+            alert('카드 생성에 실패했습니다.');
+        }
+    } catch (error) {
+        console.error('카드 생성 실패:', error);
+        alert('카드 생성에 실패했습니다.');
+    }
+    // 수정 모달 닫기
+const editModal = document.getElementById('editModal');
+const closeEdit = document.getElementById('closeEdit');
+
+if (closeEdit) {
+    closeEdit.addEventListener('click', function() {
+        editModal.style.display = 'none';
+    });
+}
+
+// 수정 폼 제출
+const editForm = document.getElementById('editForm');
+if (editForm) {
+    editForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const cardId = document.getElementById('editCardId').value;
+        const startDateValue = document.getElementById('editStartDate').value;
+        const endDateValue = document.getElementById('editDueDate').value;
+        
+        const cardData = {
+            title: document.getElementById('editTitle').value,
+            description: document.getElementById('editDescription').value,
+            git_issue: document.getElementById('editGitIssue').value,
+            assignee: document.getElementById('editAssignee').value,
+            issue_type: document.getElementById('editIssueType').value,
+            priority: document.getElementById('editPriority').value,
+            column_name: document.getElementById('editColumnName').value
+        };
+        
+        // 날짜가 입력된 경우에만 추가
+        if (startDateValue) {
+            cardData.start_date = startDateValue;
+        }
+        if (endDateValue) {
+            cardData.end_date = endDateValue;
+        }
+        
+        // label 추가
+        const labelValue = document.getElementById('editLabel').value;
+        if (labelValue) {
+            cardData.label = labelValue;
+        }
+        
+        try {
+            const response = await fetch(`${API_URL}/cards/${cardId}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(cardData)
+            });
+            
+            if (response.ok) {
+                editModal.style.display = 'none';
+                editForm.reset();
+                showNotification('카드가 수정되었습니다');
+                loadCards();
+            } else {
+                const error = await response.json();
+                console.error('에러:', error);
+                alert('카드 수정에 실패했습니다.');
+            }
+        } catch (error) {
+            console.error('카드 수정 실패:', error);
+            alert('카드 수정에 실패했습니다.');
+        }
+    });
+}
+
+
+
+});
+
+}
+
     // 모달 닫기 (외부 클릭)
     const detailModal = document.getElementById('detailModal');
     const closeDetail = document.getElementById('closeDetail');
@@ -586,14 +866,18 @@ function setupEventListeners() {
         closeDetail.addEventListener('click', closeDetailModal);
     }
     
+        // 모달 외부 클릭 시 닫기 (기존 코드에 추가)
     window.onclick = function(event) {
-        if (cardModal && event.target == cardModal) {
-            cardModal.style.display = 'none';
-        }
-        if (detailModal && event.target == detailModal) {
-            closeDetailModal();
-        }
-    };
+    if (cardModal && event.target == cardModal) {
+        cardModal.style.display = 'none';
+    }
+    if (detailModal && event.target == detailModal) {
+        closeDetailModal();
+    }
+    if (editModal && event.target == editModal) {
+        editModal.style.display = 'none';
+    }
+};
 }
 
 // ========== 페이지 로드 시 초기화 ==========
