@@ -3,46 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kanban + Calendar Board</title>
+    <title>📋 Kanban Calendar Board</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 </head>
 <body>
     <header>
-        <h1>📊 Kanban + Calendar Board</h1>
+        <h1>📋 Kanban Calendar Board</h1>
         <div class="header-actions">
-            <button id="toggleViewBtn" class="btn-secondary">📅 달력 보기/숨기기</button>
-            <button id="addCardBtn" class="btn-primary">+ 새 카드 추가</button>
+            <div class="nav-tabs">
+                <a href="/" class="nav-tab active">📌 활성 작업</a>
+                <a href="/archive" class="nav-tab">📦 보관함</a>
+            </div>
+            <button id="toggleViewBtn" class="btn-secondary">📅 달력 보기</button>
+            <button id="addCardBtn" class="btn-primary">➕ 카드 추가</button>
         </div>
     </header>
 
-<!-- 달력 섹션 -->
-<section id="calendarSection" class="calendar-section">
-    <div class="calendar-header">
-        <button id="prevMonth" class="btn-month">◀</button>
-        <h2 id="currentMonth"></h2>
-        <button id="nextMonth" class="btn-month">▶</button>
-        
-        <!-- ⭐ 이 부분을 추가하세요 -->
-        <div class="view-controls">
-            <button id="monthViewBtn" class="view-btn active">월별</button>
-            <button id="weekViewBtn" class="view-btn">주별</button>
+    <!-- 달력 섹션 -->
+    <section id="calendarSection" class="calendar-section">
+        <div class="calendar-header">
+            <button id="prevMonth" class="btn-month">◀</button>
+            <h2 id="currentMonth"></h2>
+            <button id="nextMonth" class="btn-month">▶</button>
+            
+            <div class="view-controls">
+                <button id="monthViewBtn" class="view-btn">월별</button>
+                <button id="weekViewBtn" class="view-btn active">주별</button>
+            </div>
         </div>
-    </div>
-    <div class="calendar-grid" id="calendarGrid">
-        <div class="calendar-day-header">일</div>
-        <div class="calendar-day-header">월</div>
-        <div class="calendar-day-header">화</div>
-        <div class="calendar-day-header">수</div>
-        <div class="calendar-day-header">목</div>
-        <div class="calendar-day-header">금</div>
-        <div class="calendar-day-header">토</div>
-    </div>
-</section>
+        <div class="calendar-grid" id="calendarGrid">
+            <div class="calendar-day-header">일</div>
+            <div class="calendar-day-header">월</div>
+            <div class="calendar-day-header">화</div>
+            <div class="calendar-day-header">수</div>
+            <div class="calendar-day-header">목</div>
+            <div class="calendar-day-header">금</div>
+            <div class="calendar-day-header">토</div>
+        </div>
+    </section>
 
-
-    <!-- 칸반 보드 섹션 -->
-    <section class="kanban-section">
+    <!-- 칸반 섹션 (1개만!) -->
+    <section id="kanbanSection" class="kanban-section">
         <div class="kanban-container">
             <div class="kanban-column">
                 <h2>📝 To Do</h2>
@@ -50,7 +52,7 @@
             </div>
             <div class="kanban-column">
                 <h2>🚀 In Progress</h2>
-                <div class="cards-container" id="in_progress-cards" data-column="in_progress"></div>
+                <div class="cards-container" id="inprogress-cards" data-column="inprogress"></div>
             </div>
             <div class="kanban-column">
                 <h2>✅ Done</h2>
@@ -67,16 +69,16 @@
             <form id="cardForm">
                 <input type="text" id="title" placeholder="제목" required>
                 <textarea id="description" placeholder="설명"></textarea>
-                <input type="text" id="gitIssue" placeholder="Git 이슈 번호 (예: #123, GH-456)">
+                <input type="text" id="gitIssue" placeholder="Git 이슈 번호">
                 <input type="text" id="assignee" placeholder="담당자">
                 <input type="text" id="label" placeholder="라벨">
-
+                
                 <select id="issueType" required>
                     <option value="story">📖 Story</option>
                     <option value="task">✅ Task</option>
                     <option value="bug">🐛 Bug</option>
                 </select>
-
+                
                 <select id="priority" required>
                     <option value="highest">🔴 Highest</option>
                     <option value="high">🟠 High</option>
@@ -84,15 +86,15 @@
                     <option value="low">🟢 Low</option>
                     <option value="lowest">🔵 Lowest</option>
                 </select>
-
-                <input type="date" id="dueDate" placeholder="마감일">
-
+                
+                <input type="date" id="dueDate">
+                
                 <select id="columnName" required>
                     <option value="todo">To Do</option>
-                    <option value="in_progress">In Progress</option>
+                    <option value="inprogress">In Progress</option>
                     <option value="done">Done</option>
                 </select>
-
+                
                 <button type="submit" class="btn-primary">추가</button>
             </form>
         </div>
@@ -107,7 +109,6 @@
     </div>
 
     <script>
-        // Supabase 환경변수 (백엔드에서 전달)
         window.SUPABASE_URL = "{{ supabase_url }}";
         window.SUPABASE_KEY = "{{ supabase_key }}";
     </script>

@@ -15,19 +15,30 @@ SUPABASE_KEY = os.getenv('SUPABASE_KEY')
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# 루트 경로
+# ========== 페이지 라우트 ==========
+
 @app.route('/')
 def index():
+    """메인 페이지 (달력 + 칸반)"""
     return render_template('index.html', 
                          supabase_url=SUPABASE_URL,
                          supabase_key=SUPABASE_KEY)
+
+@app.route('/archive')
+def archive():
+    """보관함 페이지"""
+    return render_template('archive.html',
+                         supabase_url=SUPABASE_URL,
+                         supabase_key=SUPABASE_KEY)
+
+# ========== API 엔드포인트 ==========
 
 # 모든 카드 조회
 @app.route('/api/cards', methods=['GET'])
 def get_cards():
     response = supabase.table('kanban_cards')\
         .select('*')\
-        .order('position')\
+        .order('created_at', desc=True)\
         .execute()
     return jsonify(response.data)
 
@@ -63,27 +74,59 @@ def create_card():
     }
 
     # labels 컬럼이 있으면 추가 (없으면 제외)
-    if 'labels' in data:
-        card_data['labels'] = data['labels']
+    if 'label' in data:
+        card_data['label'] = data['label']
 
     response = supabase.table('kanban_cards').insert(card_data).execute()
     return jsonify(response.data[0]), 201
 
-# 카드 업데이트
-@app.route('/api/cards/<int:card_id>', methods=['PUT'])
+# 카드 업데이트 (PATCH 추가!)
+@app.route('/api/cards/<int:card_id>', methods=['PUT', 'PATCH'])
 def update_card(card_id):
     data = request.json
     response = supabase.table('kanban_cards')\
         .update(data)\
         .eq('id', card_id)\
         .execute()
-    return jsonify(response.data[0])
+    
+    if response.data and len(response.data) > 0:
+        return jsonify(response.data[0])
+    else:
+        return jsonify({'error': 'Card not found'}), 404
 
 # 카드 삭제
 @app.route('/api/cards/<int:card_id>', methods=['DELETE'])
 def delete_card(card_id):
     supabase.table('kanban_cards').delete().eq('id', card_id).execute()
-    return '', 204
+    return jsonify({'success': True}), 200
+
+# 카드 보관 (새로 추가!)
+@app.route('/api/cards/<int:card_id>/archive', methods=['POST'])
+def archive_card(card_id):
+    """카드를 보관함으로 이동 (column_name을 'archive'로 변경)"""
+    response = supabase.table('kanban_cards')\
+        .update({'column_name': 'archive'})\
+        .eq('id', card_id)\
+        .execute()
+    
+    if response.data and len(response.data) > 0:
+        return jsonify(response.data[0])
+    else:
+        return jsonify({'error': 'Card not found'}), 404
+
+# 카드 복원 (새로 추가!)
+@app.route('/api/cards/<int:card_id>/restore', methods=['POST'])
+def restore_card(card_id):
+    """보관함에서 카드를 Done으로 복원"""
+    response = supabase.table('kanban_cards')\
+        .update({'column_name': 'done'})\
+        .eq('id', card_id)\
+        .execute()
+    
+    if response.data and len(response.data) > 0:
+        return jsonify(response.data[0])
+    else:
+        return jsonify({'error': 'Card not found'}), 404
 
 # 댓글 조회
 @app.route('/api/cards/<int:card_id>/comments', methods=['GET'])
@@ -107,4 +150,4 @@ def add_comment(card_id):
     return jsonify(response.data[0]), 201
 
 if __name__ == '__main__':
-    app.run(debug=False, host='0.0.0.0', port=5001)
+    app.run(debug=True, host='0.0.0.0', port=5001)

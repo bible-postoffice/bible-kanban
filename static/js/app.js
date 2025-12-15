@@ -3,35 +3,10 @@ const SUPABASE_URL = window.SUPABASE_URL;
 const SUPABASE_KEY = window.SUPABASE_KEY;
 const API_URL = `${window.location.protocol}//${window.location.hostname}:5001/api`;
 
-
-// 전역 변수
+// ========== 전역 변수 ==========
 let currentDate = new Date();
+let currentView = 'week'; // 주별 뷰로 시작
 let allCards = [];
-let currentView = 'month'; // 월별/주별 뷰 상태
-
-// 모달 관련
-const modal = document.getElementById('cardModal');
-const detailModal = document.getElementById('detailModal');
-const addCardBtn = document.getElementById('addCardBtn');
-const closeBtn = document.querySelector('.close');
-const closeDetail = document.getElementById('closeDetail');
-const cardForm = document.getElementById('cardForm');
-const toggleViewBtn = document.getElementById('toggleViewBtn');
-const calendarSection = document.getElementById('calendarSection');
-
-// 이벤트 리스너
-addCardBtn.onclick = () => modal.style.display = 'block';
-closeBtn.onclick = () => modal.style.display = 'none';
-closeDetail.onclick = () => detailModal.style.display = 'none';
-
-toggleViewBtn.onclick = () => {
-    calendarSection.classList.toggle('hidden');
-};
-
-window.onclick = (e) => {
-    if (e.target === modal) modal.style.display = 'none';
-    if (e.target === detailModal) detailModal.style.display = 'none';
-};
 
 // 이슈 타입 아이콘
 const issueIcons = {
@@ -49,46 +24,7 @@ const priorityIcons = {
     lowest: '🔵'
 };
 
-// 뷰 전환 버튼 이벤트 리스너 (버튼이 있을 때만 실행)
-const monthViewBtn = document.getElementById('monthViewBtn');
-const weekViewBtn = document.getElementById('weekViewBtn');
-
-if (monthViewBtn && weekViewBtn) {
-    monthViewBtn.onclick = () => {
-        currentView = 'month';
-        monthViewBtn.classList.add('active');
-        weekViewBtn.classList.remove('active');
-        renderCalendar();
-    };
-
-    weekViewBtn.onclick = () => {
-        currentView = 'week';
-        weekViewBtn.classList.add('active');
-        monthViewBtn.classList.remove('active');
-        renderCalendar();
-    };
-}
-
-// 달력 이전/다음 버튼
-document.getElementById('prevMonth').onclick = () => {
-    if (currentView === 'month') {
-        currentDate.setMonth(currentDate.getMonth() - 1);
-    } else {
-        currentDate.setDate(currentDate.getDate() - 7);
-    }
-    renderCalendar();
-};
-
-document.getElementById('nextMonth').onclick = () => {
-    if (currentView === 'month') {
-        currentDate.setMonth(currentDate.getMonth() + 1);
-    } else {
-        currentDate.setDate(currentDate.getDate() + 7);
-    }
-    renderCalendar();
-};
-
-// 실시간 업데이트 표시
+// ========== 알림 ==========
 function showNotification(message) {
     const notification = document.createElement('div');
     notification.style.cssText = `
@@ -126,13 +62,85 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
-// 달력 렌더링 (뷰에 따라 분기)
+// ========== 달력 렌더링 ==========
 function renderCalendar() {
-    if (currentView === 'month') {
-        renderMonthView();
-    } else {
-        renderWeekView();
+    const calendarGrid = document.getElementById('calendarGrid');
+    const currentMonth = document.getElementById('currentMonth');
+    
+    if (!calendarGrid || !currentMonth) {
+        console.error('달력 요소를 찾을 수 없습니다');
+        return;
     }
+
+    // 기존 날짜 칸 제거 (헤더는 유지)
+    const dayHeaders = Array.from(calendarGrid.querySelectorAll('.calendar-day-header'));
+    calendarGrid.innerHTML = '';
+    dayHeaders.forEach(header => calendarGrid.appendChild(header));
+    
+    if (currentView === 'week') {
+        renderWeekView();
+    } else {
+        renderMonthView();
+    }
+}
+
+// 주별 뷰 렌더링
+function renderWeekView() {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    const date = currentDate.getDate();
+
+    const currentDay = new Date(year, month, date);
+    const dayOfWeek = currentDay.getDay();
+    const startOfWeek = new Date(currentDay);
+    startOfWeek.setDate(date - dayOfWeek);
+
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+
+    const monthNames = ['1월', '2월', '3월', '4월', '5월', '6월', 
+                        '7월', '8월', '9월', '10월', '11월', '12월'];
+    const startMonth = startOfWeek.getMonth();
+    const endMonth = endOfWeek.getMonth();
+    
+    if (startMonth === endMonth) {
+        document.getElementById('currentMonth').textContent = 
+            `${startOfWeek.getFullYear()}년 ${monthNames[startMonth]} ${startOfWeek.getDate()}일 - ${endOfWeek.getDate()}일`;
+    } else {
+        document.getElementById('currentMonth').textContent = 
+            `${monthNames[startMonth]} ${startOfWeek.getDate()}일 - ${monthNames[endMonth]} ${endOfWeek.getDate()}일`;
+    }
+
+    const calendarGrid = document.getElementById('calendarGrid');
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    for (let i = 0; i < 7; i++) {
+        const currentCellDate = new Date(startOfWeek);
+        currentCellDate.setDate(startOfWeek.getDate() + i);
+
+        const dayCell = document.createElement('div');
+        dayCell.className = 'calendar-day week-view';
+
+        if (currentCellDate.getTime() === today.getTime()) {
+            dayCell.classList.add('today');
+        }
+
+        const dayNumberDiv = document.createElement('div');
+        dayNumberDiv.className = 'day-number';
+        const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+        dayNumberDiv.textContent = `${dayNames[i]} ${currentCellDate.getDate()}`;
+        dayCell.appendChild(dayNumberDiv);
+
+        const cardsDiv = document.createElement('div');
+        cardsDiv.className = 'calendar-cards';
+        cardsDiv.dataset.date = currentCellDate.toISOString().split('T')[0];
+        dayCell.appendChild(cardsDiv);
+
+        calendarGrid.appendChild(dayCell);
+    }
+
+    renderCalendarCards();
 }
 
 // 월별 뷰 렌더링
@@ -145,9 +153,6 @@ function renderMonthView() {
     document.getElementById('currentMonth').textContent = `${year}년 ${monthNames[month]}`;
 
     const calendarGrid = document.getElementById('calendarGrid');
-    const dayCells = calendarGrid.querySelectorAll('.calendar-day');
-    dayCells.forEach(cell => cell.remove());
-
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
     const startingDayOfWeek = firstDay.getDay();
@@ -209,68 +214,6 @@ function renderMonthView() {
     renderCalendarCards();
 }
 
-// 주별 뷰 렌더링
-function renderWeekView() {
-    const year = currentDate.getFullYear();
-    const month = currentDate.getMonth();
-    const date = currentDate.getDate();
-
-    const currentDay = new Date(year, month, date);
-    const dayOfWeek = currentDay.getDay();
-    const startOfWeek = new Date(currentDay);
-    startOfWeek.setDate(date - dayOfWeek);
-
-    const endOfWeek = new Date(startOfWeek);
-    endOfWeek.setDate(startOfWeek.getDate() + 6);
-
-    const monthNames = ['1월', '2월', '3월', '4월', '5월', '6월', 
-                        '7월', '8월', '9월', '10월', '11월', '12월'];
-    const startMonth = startOfWeek.getMonth();
-    const endMonth = endOfWeek.getMonth();
-    
-    if (startMonth === endMonth) {
-        document.getElementById('currentMonth').textContent = 
-            `${startOfWeek.getFullYear()}년 ${monthNames[startMonth]} ${startOfWeek.getDate()}일 - ${endOfWeek.getDate()}일`;
-    } else {
-        document.getElementById('currentMonth').textContent = 
-            `${monthNames[startMonth]} ${startOfWeek.getDate()}일 - ${monthNames[endMonth]} ${endOfWeek.getDate()}일`;
-    }
-
-    const calendarGrid = document.getElementById('calendarGrid');
-    const dayCells = calendarGrid.querySelectorAll('.calendar-day');
-    dayCells.forEach(cell => cell.remove());
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    for (let i = 0; i < 7; i++) {
-        const currentCellDate = new Date(startOfWeek);
-        currentCellDate.setDate(startOfWeek.getDate() + i);
-
-        const dayCell = document.createElement('div');
-        dayCell.className = 'calendar-day week-view';
-
-        if (currentCellDate.getTime() === today.getTime()) {
-            dayCell.classList.add('today');
-        }
-
-        const dayNumberDiv = document.createElement('div');
-        dayNumberDiv.className = 'day-number';
-        const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
-        dayNumberDiv.textContent = `${dayNames[i]} ${currentCellDate.getDate()}`;
-        dayCell.appendChild(dayNumberDiv);
-
-        const cardsDiv = document.createElement('div');
-        cardsDiv.className = 'calendar-cards';
-        cardsDiv.dataset.date = currentCellDate.toISOString().split('T')[0];
-        dayCell.appendChild(cardsDiv);
-
-        calendarGrid.appendChild(dayCell);
-    }
-
-    renderCalendarCards();
-}
-
 // 달력에 카드 배치
 function renderCalendarCards() {
     document.querySelectorAll('.calendar-cards').forEach(c => c.innerHTML = '');
@@ -284,11 +227,10 @@ function renderCalendarCards() {
         if (cardContainer) {
             const calendarCard = document.createElement('div');
             calendarCard.className = 'calendar-card';
-            const cardId = card.id;
             
             calendarCard.onclick = (e) => {
                 e.stopPropagation();
-                showCardDetail(cardId);
+                showCardDetail(card.id);
             };
 
             calendarCard.innerHTML = `
@@ -304,23 +246,46 @@ function renderCalendarCards() {
     });
 }
 
-// 카드 로드
+// ========== 카드 로드 ==========
 async function loadCards() {
-    const response = await fetch(`${API_URL}/cards`);
-    const cards = await response.json();
-    allCards = cards;
-
-    document.querySelectorAll('.cards-container').forEach(c => c.innerHTML = '');
-
-    cards.forEach(card => {
-        const cardElement = createCardElement(card);
-        document.getElementById(`${card.column_name}-cards`).appendChild(cardElement);
-    });
-
-    renderCalendar();
-    initSortable();
+    try {
+        const response = await fetch('/api/cards');
+        const cards = await response.json();
+        
+        console.log('로드된 카드:', cards.length, '개');
+        
+        // 전역 변수에 저장 (archive 제외)
+        allCards = cards.filter(card => card.column_name !== 'archive');
+        
+        // 모든 컨테이너 비우기
+        document.querySelectorAll('.cards-container').forEach(container => {
+            container.innerHTML = '';
+        });
+        
+        allCards.forEach(card => {
+            // column_name 정규화
+            let columnName = card.column_name;
+            if (columnName === 'in_progress') {
+                columnName = 'inprogress';
+            }
+            
+            const container = document.getElementById(`${columnName}-cards`);
+            if (container) {
+                const cardElement = createCardElement(card);
+                container.appendChild(cardElement);
+            } else {
+                console.warn(`Container not found for column: ${columnName}`);
+            }
+        });
+        
+        initializeSortable();
+        renderCalendar();
+    } catch (error) {
+        console.error('Failed to load cards:', error);
+    }
 }
 
+// ========== 카드 요소 생성 ==========
 function createCardElement(card) {
     const div = document.createElement('div');
     div.className = 'card';
@@ -366,7 +331,8 @@ function createCardElement(card) {
     return div;
 }
 
-function initSortable() {
+// ========== Sortable 초기화 ==========
+function initializeSortable() {
     document.querySelectorAll('.cards-container').forEach(container => {
         new Sortable(container, {
             group: 'cards',
@@ -375,8 +341,8 @@ function initSortable() {
                 const cardId = evt.item.dataset.id;
                 const newColumn = evt.to.dataset.column;
 
-                await fetch(`${API_URL}/cards/${cardId}`, {
-                    method: 'PUT',
+                await fetch(`/api/cards/${cardId}`, {
+                    method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ column_name: newColumn })
                 });
@@ -388,119 +354,261 @@ function initSortable() {
     });
 }
 
+// ========== 카드 상세 보기 ==========
 async function showCardDetail(cardId) {
-    const response = await fetch(`${API_URL}/cards/${cardId}`);
-    const card = await response.json();
-
-    const commentsResponse = await fetch(`${API_URL}/cards/${cardId}/comments`);
-    const comments = await commentsResponse.json();
-
-    const detailContent = document.getElementById('detailContent');
-    detailContent.innerHTML = `
-        <div class="detail-header">
-            <div class="detail-title-section">
-                <div class="detail-title">
-                    ${issueIcons[card.issue_type]} ${card.title}
-                </div>
-                <div class="detail-meta">
-                    <span class="meta-item">${priorityIcons[card.priority]} ${card.priority}</span>
-                    ${card.assignee ? `<span class="card-assignee">👤 ${card.assignee}</span>` : ''}
-                    ${card.git_issue ? `<span class="git-issue">🔗 ${card.git_issue}</span>` : ''}
-                    ${card.due_date ? `<span class="meta-item">📅 ${new Date(card.due_date).toLocaleDateString('ko-KR')}</span>` : ''}
-                </div>
-            </div>
-            <div class="detail-actions">
-                <button class="btn-edit" onclick="editCard(${card.id})">수정</button>
-                <button class="btn-delete" onclick="deleteCard(${card.id})">삭제</button>
-            </div>
-        </div>
-
-        <div class="detail-section">
-            <h3>📝 설명</h3>
-            <div class="detail-description">${card.description || '설명이 없습니다.'}</div>
-        </div>
-
-        <div class="detail-section">
-            <h3>💬 댓글 (${comments.length})</h3>
-            <div class="comments-list">
-                ${comments.map(c => `
-                    <div class="comment-item">
-                        <div class="comment-author">${c.author}</div>
-                        <div class="comment-time">${new Date(c.created_at).toLocaleString('ko-KR')}</div>
-                        <div class="comment-content">${c.content}</div>
+    try {
+        const response = await fetch(`/api/cards/${cardId}`);
+        const card = await response.json();
+        
+        const modal = document.getElementById('detailModal');
+        const content = document.getElementById('detailContent');
+        
+        content.innerHTML = `
+            <div class="detail-header">
+                <div class="detail-title-section">
+                    <h2 class="detail-title">
+                        ${issueIcons[card.issue_type] || ''} 
+                        ${card.title}
+                    </h2>
+                    <div class="detail-meta">
+                        <span class="priority-badge">${priorityIcons[card.priority] || ''}</span>
+                        ${card.assignee ? `<span class="card-assignee">👤 ${card.assignee}</span>` : ''}
+                        ${card.git_issue ? `<span class="git-issue">🔗 ${card.git_issue}</span>` : ''}
+                        ${card.due_date ? `<span class="meta-item">📅 ${card.due_date}</span>` : ''}
                     </div>
-                `).join('') || '<p style="color: #95a5a6;">댓글이 없습니다.</p>'}
+                </div>
+                <div class="detail-actions">
+                    <button class="btn-edit" onclick="editCard(${card.id})">✏️ 수정</button>
+                    ${card.column_name === 'done' ? `
+                        <button class="btn-archive" onclick="archiveCard(${card.id})">📦 보관</button>
+                    ` : ''}
+                    <button class="btn-delete" onclick="deleteCard(${card.id})">🗑️ 삭제</button>
+                </div>
             </div>
-            <div class="comment-form">
-                <input type="text" id="commentAuthor" class="comment-input" placeholder="이름" style="flex: 0.3;">
-                <input type="text" id="commentContent" class="comment-input" placeholder="댓글을 입력하세요" style="flex: 1;">
-                <button class="btn-comment" onclick="addComment(${card.id})">작성</button>
+            
+            <div class="detail-section">
+                <h3>📝 설명</h3>
+                <div class="detail-description">
+                    ${card.description || '설명이 없습니다.'}
+                </div>
             </div>
-        </div>
-    `;
-
-    detailModal.style.display = 'block';
+        `;
+        
+        modal.style.display = 'block';
+    } catch (error) {
+        console.error('카드 상세 정보 로드 실패:', error);
+    }
 }
 
-async function addComment(cardId) {
-    const author = document.getElementById('commentAuthor').value;
-    const content = document.getElementById('commentContent').value;
-
-    if (!author || !content) {
-        alert('이름과 댓글 내용을 입력하세요');
+// ========== 카드 보관 ==========
+async function archiveCard(cardId) {
+    if (!confirm('이 카드를 보관하시겠습니까?')) {
         return;
     }
-
-    await fetch(`${API_URL}/cards/${cardId}/comments`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ author, content })
-    });
-
-    showNotification('댓글이 추가되었습니다');
-    showCardDetail(cardId);
+    
+    try {
+        const response = await fetch(`/api/cards/${cardId}/archive`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (response.ok) {
+            showNotification('카드가 보관함으로 이동되었습니다! 📦');
+            closeDetailModal();
+            loadCards();
+        }
+    } catch (error) {
+        console.error('카드 보관 실패:', error);
+        alert('카드 보관에 실패했습니다.');
+    }
 }
 
-cardForm.onsubmit = async (e) => {
-    e.preventDefault();
-
-    const cardData = {
-        title: document.getElementById('title').value,
-        description: document.getElementById('description').value,
-        assignee: document.getElementById('assignee').value,
-        issue_type: document.getElementById('issueType').value,
-        priority: document.getElementById('priority').value,
-        due_date: document.getElementById('dueDate').value || null,
-        column_name: document.getElementById('columnName').value,
-        git_issue: document.getElementById('gitIssue').value
-    };
-
-    await fetch(`${API_URL}/cards`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(cardData)
-    });
-
-    modal.style.display = 'none';
-    cardForm.reset();
-    showNotification('카드가 추가되었습니다');
-    await loadCards();
-};
-
+// ========== 카드 삭제 ==========
 async function deleteCard(cardId) {
     if (!confirm('정말 삭제하시겠습니까?')) return;
 
-    await fetch(`${API_URL}/cards/${cardId}`, {
-        method: 'DELETE'
-    });
+    try {
+        await fetch(`/api/cards/${cardId}`, {
+            method: 'DELETE'
+        });
 
-    detailModal.style.display = 'none';
-    showNotification('카드가 삭제되었습니다');
-    await loadCards();
+        closeDetailModal();
+        showNotification('카드가 삭제되었습니다');
+        await loadCards();
+    } catch (error) {
+        console.error('카드 삭제 실패:', error);
+    }
 }
 
+// ========== 카드 수정 ==========
 function editCard(cardId) {
     alert('수정 기능은 추후 구현 예정입니다');
 }
 
-loadCards();
+// ========== 모달 닫기 ==========
+function closeDetailModal() {
+    const modal = document.getElementById('detailModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+// ========== 이벤트 리스너 설정 ==========
+function setupEventListeners() {
+    // 달력 전환 버튼
+    const toggleViewBtn = document.getElementById('toggleViewBtn');
+    if (toggleViewBtn) {
+        toggleViewBtn.addEventListener('click', function() {
+            const calendarSection = document.getElementById('calendarSection');
+            const kanbanSection = document.getElementById('kanbanSection');
+            
+            if (calendarSection.classList.contains('hidden')) {
+                calendarSection.classList.remove('hidden');
+                kanbanSection.classList.add('hidden');
+                toggleViewBtn.textContent = '📋 칸반 보기';
+            } else {
+                calendarSection.classList.add('hidden');
+                kanbanSection.classList.remove('hidden');
+                toggleViewBtn.textContent = '📅 달력 보기';
+            }
+        });
+    }
+    
+    // 달력 이전/다음 버튼
+    const prevMonthBtn = document.getElementById('prevMonth');
+    const nextMonthBtn = document.getElementById('nextMonth');
+    
+    if (prevMonthBtn) {
+        prevMonthBtn.addEventListener('click', function() {
+            if (currentView === 'month') {
+                currentDate.setMonth(currentDate.getMonth() - 1);
+            } else {
+                currentDate.setDate(currentDate.getDate() - 7);
+            }
+            renderCalendar();
+        });
+    }
+    
+    if (nextMonthBtn) {
+        nextMonthBtn.addEventListener('click', function() {
+            if (currentView === 'month') {
+                currentDate.setMonth(currentDate.getMonth() + 1);
+            } else {
+                currentDate.setDate(currentDate.getDate() + 7);
+            }
+            renderCalendar();
+        });
+    }
+    
+    // 월별/주별 뷰 버튼
+    const monthViewBtn = document.getElementById('monthViewBtn');
+    const weekViewBtn = document.getElementById('weekViewBtn');
+    
+    if (monthViewBtn && weekViewBtn) {
+        monthViewBtn.addEventListener('click', function() {
+            currentView = 'month';
+            monthViewBtn.classList.add('active');
+            weekViewBtn.classList.remove('active');
+            renderCalendar();
+        });
+        
+        weekViewBtn.addEventListener('click', function() {
+            currentView = 'week';
+            weekViewBtn.classList.add('active');
+            monthViewBtn.classList.remove('active');
+            renderCalendar();
+        });
+    }
+    
+    // 카드 추가 버튼
+    const addCardBtn = document.getElementById('addCardBtn');
+    const cardModal = document.getElementById('cardModal');
+    const closeModal = cardModal ? cardModal.querySelector('.close') : null;
+    const cardForm = document.getElementById('cardForm');
+    
+    if (addCardBtn && cardModal) {
+        addCardBtn.addEventListener('click', function() {
+            cardModal.style.display = 'block';
+        });
+    }
+    
+    if (closeModal) {
+        closeModal.addEventListener('click', function() {
+            cardModal.style.display = 'none';
+        });
+    }
+    
+    if (cardForm) {
+        cardForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const cardData = {
+                title: document.getElementById('title').value,
+                description: document.getElementById('description').value,
+                git_issue: document.getElementById('gitIssue').value,
+                assignee: document.getElementById('assignee').value,
+                label: document.getElementById('label').value,
+                issue_type: document.getElementById('issueType').value,
+                priority: document.getElementById('priority').value,
+                due_date: document.getElementById('dueDate').value,
+                column_name: document.getElementById('columnName').value
+            };
+            
+            try {
+                const response = await fetch('/api/cards', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(cardData)
+                });
+                
+                if (response.ok) {
+                    cardModal.style.display = 'none';
+                    cardForm.reset();
+                    showNotification('카드가 추가되었습니다');
+                    loadCards();
+                }
+            } catch (error) {
+                console.error('카드 생성 실패:', error);
+                alert('카드 생성에 실패했습니다.');
+            }
+        });
+    }
+    
+    // 모달 닫기 (외부 클릭)
+    const detailModal = document.getElementById('detailModal');
+    const closeDetail = document.getElementById('closeDetail');
+    
+    if (closeDetail) {
+        closeDetail.addEventListener('click', closeDetailModal);
+    }
+    
+    window.onclick = function(event) {
+        if (cardModal && event.target == cardModal) {
+            cardModal.style.display = 'none';
+        }
+        if (detailModal && event.target == detailModal) {
+            closeDetailModal();
+        }
+    };
+}
+
+// ========== 페이지 로드 시 초기화 ==========
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('✅ 페이지 로드 시작');
+    
+    // 1. 전역 변수 초기화
+    currentView = 'week';
+    currentDate = new Date();
+    
+    // 2. 카드 로드 (renderCalendar 포함)
+    loadCards();
+    
+    // 3. 이벤트 리스너 설정
+    setupEventListeners();
+    
+    console.log('✅ 초기화 완료');
+});

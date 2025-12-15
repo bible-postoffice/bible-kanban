@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📦 보관함 - Kanban Calendar Board</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v={{ range(1, 10000) | random }}">
+    <style>
+        /* 임시 CSS - 캐시 우회용 */
+        .archive-section {
+            padding: 40px 20px !important;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%) !important;
+            min-height: calc(100vh - 80px) !important;
+        }
+
+        .archive-header {
+            background: white !important;
+            padding: 40px !important;
+            border-radius: 20px !important;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08) !important;
+            margin-bottom: 30px !important;
+            display: flex !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+        }
+
+        .archive-title-group {
+            display: flex !important;
+            align-items: center !important;
+            gap: 24px !important;
+        }
+
+        .archive-icon {
+            font-size: 64px !important;
+            line-height: 1 !important;
+        }
+
+        .archive-title {
+            font-size: 36px !important;
+            font-weight: 700 !important;
+            color: #2c3e50 !important;
+            margin: 0 0 8px 0 !important;
+        }
+
+        .archive-subtitle {
+            font-size: 16px !important;
+            color: #7f8c8d !important;
+            margin: 0 !important;
+        }
+
+        .archive-stats {
+            display: flex !important;
+            gap: 20px !important;
+        }
+
+        .stat-item {
+            text-align: center !important;
+            padding: 20px 30px !important;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            border-radius: 16px !important;
+            box-shadow: 0 4px 16px rgba(102, 126, 234, 0.4) !important;
+            min-width: 120px !important;
+        }
+
+        .stat-number {
+            display: block !important;
+            font-size: 40px !important;
+            font-weight: 700 !important;
+            color: white !important;
+            margin-bottom: 8px !important;
+        }
+
+        .stat-label {
+            display: block !important;
+            font-size: 13px !important;
+            color: rgba(255, 255, 255, 0.95) !important;
+            text-transform: uppercase !important;
+            letter-spacing: 1px !important;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>📋 Kanban Calendar Board</h1>
+        <div class="header-actions">
+            <div class="nav-tabs">
+                <a href="/" class="nav-tab">
+                    📌 활성 작업
+                </a>
+                <a href="/archive" class="nav-tab active">
+                    📦 보관함
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Archive 페이지 -->
+    <section class="archive-section">
+        <div class="archive-container">
+            <!-- 헤더 영역 -->
+            <div class="archive-header">
+                <div class="archive-title-group">
+                    <div class="archive-icon">📦</div>
+                    <div>
+                        <h1 class="archive-title">보관된 카드</h1>
+                        <p class="archive-subtitle">완료된 작업을 보관하고 관리하세요</p>
+                    </div>
+                </div>
+                <div class="archive-stats" id="archiveStats">
+                    <div class="stat-item">
+                        <span class="stat-number" id="totalCards">0</span>
+                        <span class="stat-label">전체 카드</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 카드 그리드 -->
+            <div class="archive-grid" id="archiveGrid">
+                <!-- 보관된 카드들이 여기에 표시됨 -->
+            </div>
+        </div>
+    </section>
+
+    <!-- 카드 상세 모달 -->
+    <div id="detailModal" class="modal">
+        <div class="modal-content modal-large">
+            <span class="close" id="closeDetail">&times;</span>
+            <div id="detailContent"></div>
+        </div>
+    </div>
+
+    <script>
+        window.SUPABASE_URL = "{{ supabase_url }}";
+        window.SUPABASE_KEY = "{{ supabase_key }}";
+    </script>
+    <script src="{{ url_for('static', filename='js/archive.js') }}"></script>
+</body>
+</html>
