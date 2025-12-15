@@ -3,6 +3,7 @@ const SUPABASE_URL = window.SUPABASE_URL;
 const SUPABASE_KEY = window.SUPABASE_KEY;
 const API_URL = `${window.location.protocol}//${window.location.hostname}:5001/api`;
 
+
 // 전역 변수
 let currentDate = new Date();
 let allCards = [];
