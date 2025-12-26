@@ -880,11 +880,9 @@ function setupEventListeners() {
             
             if (calendarSection.classList.contains('hidden')) {
                 calendarSection.classList.remove('hidden');
-                kanbanSection.classList.add('hidden');
-                toggleViewBtn.textContent = '📋 칸반 보기';
+                toggleViewBtn.textContent = '📅 달력 숨기기';
             } else {
                 calendarSection.classList.add('hidden');
-                kanbanSection.classList.remove('hidden');
                 toggleViewBtn.textContent = '📅 달력 보기';
             }
         });
