@@ -244,4 +244,4 @@ def add_comment(card_id):
     return jsonify(response.data[0]), 201
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5001)
+    app.run(debug=True, host='0.0.0.0', port=6001)
