@@ -28,6 +28,17 @@ header h1 {
     font-size: 28px;
 }
 
+.project-badge {
+    background: #e6f7f6;
+    color: #007d78;
+    border: 1px solid #00AEA7;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
 /* 헤더 버튼들 */
 .header-actions {
     display: flex;
@@ -120,6 +131,91 @@ header h1 {
     color: white !important;
     border-color: #00AEA7 !important;
     box-shadow: 0 2px 8px rgba(0, 174, 167, 0.3);
+}
+
+.project-gate {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.65);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 20000;
+    padding: 20px;
+    backdrop-filter: blur(6px);
+}
+
+.project-gate.hidden {
+    display: none;
+}
+
+.project-gate-card {
+    background: white;
+    border-radius: 16px;
+    padding: 28px;
+    width: min(420px, 92vw);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+    display: grid;
+    gap: 16px;
+    position: relative;
+}
+
+.project-gate-card h2 {
+    font-size: 22px;
+    color: #1f2a37;
+}
+
+.project-gate-subtitle {
+    color: #6b7280;
+    font-size: 14px;
+}
+
+.project-gate-field {
+    display: grid;
+    gap: 8px;
+}
+
+.project-gate-field label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+}
+
+.project-gate-field select,
+.project-gate-field input {
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.project-gate-field input {
+    text-align: center;
+    letter-spacing: 6px;
+    font-size: 18px;
+}
+
+.project-gate-field select:focus,
+.project-gate-field input:focus {
+    border-color: #00AEA7;
+    box-shadow: 0 0 0 3px rgba(0, 174, 167, 0.15);
+}
+
+.project-error {
+    color: #dc2626;
+    font-size: 13px;
+    min-height: 18px;
+}
+
+.project-gate-close {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    width: 32px;
+    height: 32px;
+    font-size: 22px;
 }
 
 /* ========== 달력 섹션 ========== */

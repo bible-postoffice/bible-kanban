@@ -8,9 +8,28 @@
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 </head>
 <body>
+    <div id="projectGate" class="project-gate">
+        <div class="project-gate-card">
+            <span id="projectGateClose" class="close project-gate-close">&times;</span>
+            <h2>프로젝트 선택</h2>
+            <p class="project-gate-subtitle">접속할 프로젝트를 고르고 비밀번호 4자리를 입력하세요.</p>
+            <div class="project-gate-field">
+                <label for="projectSelect">프로젝트</label>
+                <select id="projectSelect"></select>
+            </div>
+            <div class="project-gate-field">
+                <label for="projectPin">비밀번호 (4자리)</label>
+                <input type="password" id="projectPin" maxlength="4" inputmode="numeric" pattern="[0-9]{4}" autocomplete="one-time-code">
+            </div>
+            <button id="projectEnterBtn" class="btn-primary">접속</button>
+            <div id="projectError" class="project-error"></div>
+        </div>
+    </div>
     <header>
         <h1>📋 Kanban Calendar Board</h1>
         <div class="header-actions">
+            <span id="currentProjectBadge" class="project-badge">프로젝트 선택 필요</span>
+            <button id="switchProjectBtn" class="btn-secondary">프로젝트 변경</button>
             <div class="nav-tabs">
                 <a href="/" class="nav-tab active">📌 활성 작업</a>
                 <a href="/archive" class="nav-tab">📦 보관함</a>

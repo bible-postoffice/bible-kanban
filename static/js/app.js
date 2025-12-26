@@ -7,6 +7,10 @@ const API_URL = `${window.location.protocol}//${window.location.hostname}:5001/a
 let currentDate = new Date();
 let currentView = 'week'; // 주별 뷰로 시작
 let allCards = [];
+const PROJECT_STORAGE_KEY = 'kanban.project';
+let currentProject = null;
+let projectGateEventsBound = false;
+let previousProject = null;
 
 // 이슈 타입 아이콘
 const issueIcons = {
@@ -23,6 +27,215 @@ const priorityIcons = {
     low: '🟢',
     lowest: '🔵'
 };
+
+function buildProjectUrl(path) {
+    const url = new URL(`${API_URL}${path}`);
+    if (currentProject && currentProject.id) {
+        url.searchParams.set('project_id', currentProject.id);
+    }
+    return url.toString();
+}
+
+function readStoredProject() {
+    const raw = sessionStorage.getItem(PROJECT_STORAGE_KEY);
+    if (!raw) {
+        return null;
+    }
+    try {
+        return JSON.parse(raw);
+    } catch (error) {
+        console.warn('저장된 프로젝트 정보를 파싱할 수 없습니다:', error);
+        return null;
+    }
+}
+
+function updateProjectBadge() {
+    const badge = document.getElementById('currentProjectBadge');
+    if (!badge) {
+        return;
+    }
+    if (currentProject && currentProject.name) {
+        badge.textContent = `프로젝트: ${currentProject.name}`;
+    } else {
+        badge.textContent = '프로젝트 선택 필요';
+    }
+}
+
+function setCurrentProject(project) {
+    currentProject = project;
+    sessionStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(project));
+    updateProjectBadge();
+    const gate = document.getElementById('projectGate');
+    if (gate) {
+        gate.classList.add('hidden');
+    }
+}
+
+async function openProjectGate() {
+    previousProject = readStoredProject();
+    currentProject = null;
+    sessionStorage.removeItem(PROJECT_STORAGE_KEY);
+    updateProjectBadge();
+
+    const gate = document.getElementById('projectGate');
+    if (!gate) {
+        return;
+    }
+
+    gate.classList.remove('hidden');
+    const pinInput = document.getElementById('projectPin');
+    if (pinInput) {
+        pinInput.value = '';
+    }
+    await loadProjectOptions();
+}
+
+async function closeProjectGate() {
+    const gate = document.getElementById('projectGate');
+    if (!gate) {
+        return;
+    }
+
+    gate.classList.add('hidden');
+}
+
+async function loadProjectOptions() {
+    const select = document.getElementById('projectSelect');
+    const errorEl = document.getElementById('projectError');
+    if (!select) {
+        return;
+    }
+    select.innerHTML = '';
+    if (errorEl) {
+        errorEl.textContent = '';
+    }
+
+    try {
+        const response = await fetch(`${API_URL}/projects`);
+        const projects = await response.json();
+
+        if (!projects.length) {
+            if (errorEl) {
+                errorEl.textContent = '등록된 프로젝트가 없습니다.';
+            }
+            return;
+        }
+
+        projects.forEach(project => {
+            const option = document.createElement('option');
+            option.value = project.id;
+            option.textContent = project.name;
+            select.appendChild(option);
+        });
+    } catch (error) {
+        console.error('프로젝트 목록 로드 실패:', error);
+        if (errorEl) {
+            errorEl.textContent = '프로젝트 목록을 불러오지 못했습니다.';
+        }
+    }
+}
+
+async function verifyProjectAccess() {
+    const select = document.getElementById('projectSelect');
+    const pinInput = document.getElementById('projectPin');
+    const errorEl = document.getElementById('projectError');
+    if (!select || !pinInput) {
+        return;
+    }
+
+    if (errorEl) {
+        errorEl.textContent = '';
+    }
+
+    const projectId = select.value;
+    const pin = pinInput.value.trim();
+
+    if (!projectId) {
+        if (errorEl) {
+            errorEl.textContent = '프로젝트를 선택하세요.';
+        }
+        return;
+    }
+
+    if (!/^\d{4}$/.test(pin)) {
+        if (errorEl) {
+            errorEl.textContent = '비밀번호는 4자리 숫자여야 합니다.';
+        }
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_URL}/projects/verify`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ project_id: projectId, pin })
+        });
+
+        if (!response.ok) {
+            if (errorEl) {
+                errorEl.textContent = '비밀번호가 일치하지 않습니다.';
+            }
+            return;
+        }
+
+        const result = await response.json();
+        setCurrentProject(result.project);
+        pinInput.value = '';
+        await loadCards();
+    } catch (error) {
+        console.error('프로젝트 인증 실패:', error);
+        if (errorEl) {
+            errorEl.textContent = '프로젝트 인증에 실패했습니다.';
+        }
+    }
+}
+
+function bindProjectGateEvents() {
+    if (projectGateEventsBound) {
+        return;
+    }
+
+    const enterBtn = document.getElementById('projectEnterBtn');
+    const pinInput = document.getElementById('projectPin');
+    const closeBtn = document.getElementById('projectGateClose');
+    if (enterBtn) {
+        enterBtn.onclick = verifyProjectAccess;
+    }
+    if (pinInput) {
+        pinInput.onkeydown = (event) => {
+            if (event.key === 'Enter') {
+                verifyProjectAccess();
+            }
+        };
+    }
+    if (closeBtn) {
+        closeBtn.onclick = closeProjectGate;
+    }
+
+    projectGateEventsBound = true;
+}
+
+async function initProjectGate() {
+    const gate = document.getElementById('projectGate');
+    currentProject = readStoredProject();
+    updateProjectBadge();
+
+    if (!gate) {
+        if (currentProject) {
+            await loadCards();
+        }
+        return;
+    }
+
+    if (currentProject) {
+        gate.classList.add('hidden');
+        await loadCards();
+    } else {
+        await loadProjectOptions();
+    }
+
+    bindProjectGateEvents();
+}
 
 // ========== 알림 ==========
 function showNotification(message) {
@@ -297,7 +510,10 @@ function formatKSTDateTime(utcDateString) {
 // ========== 카드 로드 ==========
 async function loadCards() {
     try {
-        const response = await fetch(`${API_URL}/cards`);  // /api/cards → ${API_URL}/cards
+        if (!currentProject || !currentProject.id) {
+            return;
+        }
+        const response = await fetch(buildProjectUrl('/cards'));
         const cards = await response.json();
         
         console.log('로드된 카드:', cards.length, '개');
@@ -433,7 +649,7 @@ function initializeSortable() {
                 const cardId = evt.item.dataset.id;
                 const newColumn = evt.to.dataset.column;
 
-                await fetch(`${API_URL}/cards/${cardId}`, {  // /api → ${API_URL}
+                await fetch(buildProjectUrl(`/cards/${cardId}`), {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ column_name: newColumn })
@@ -450,7 +666,7 @@ function initializeSortable() {
 // ========== 카드 상세 보기 ==========
 async function showCardDetail(cardId) {
     try {
-        const response = await fetch(`${API_URL}/cards/${cardId}`);
+        const response = await fetch(buildProjectUrl(`/cards/${cardId}`));
         const card = await response.json();
         
         const modal = document.getElementById('detailModal');
@@ -559,7 +775,7 @@ async function showCardDetail(cardId) {
 async function editCard(cardId) {
     try {
         // 카드 데이터 가져오기
-        const response = await fetch(`${API_URL}/cards/${cardId}`);
+        const response = await fetch(buildProjectUrl(`/cards/${cardId}`));
         const card = await response.json();
         
         // 상세 모달 닫기
@@ -601,7 +817,7 @@ async function archiveCard(cardId) {
     }
     
     try {
-        const response = await fetch(`${API_URL}/cards/${cardId}/archive`, {  // /api → ${API_URL}
+        const response = await fetch(buildProjectUrl(`/cards/${cardId}/archive`), {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -625,7 +841,7 @@ async function deleteCard(cardId) {
     if (!confirm('정말 삭제하시겠습니까?')) return;
 
     try {
-        await fetch(`${API_URL}/cards/${cardId}`, {  // /api → ${API_URL}
+        await fetch(buildProjectUrl(`/cards/${cardId}`), {
             method: 'DELETE'
         });
 
@@ -650,6 +866,11 @@ function closeDetailModal() {
 
 // ========== 이벤트 리스너 설정 ==========
 function setupEventListeners() {
+    const switchProjectBtn = document.getElementById('switchProjectBtn');
+    if (switchProjectBtn) {
+        switchProjectBtn.addEventListener('click', openProjectGate);
+    }
+
     // 달력 전환 버튼
     const toggleViewBtn = document.getElementById('toggleViewBtn');
     if (toggleViewBtn) {
@@ -748,6 +969,10 @@ function setupEventListeners() {
         priority: document.getElementById('priority').value,
         column_name: document.getElementById('columnName').value
     };
+
+    if (currentProject && currentProject.id) {
+        cardData.project_id = currentProject.id;
+    }
     
     // 날짜가 입력된 경우에만 추가
     if (startDateValue) {
@@ -760,7 +985,7 @@ function setupEventListeners() {
     console.log('전송할 데이터:', cardData);
     
     try {
-        const response = await fetch(`${API_URL}/cards`, {
+        const response = await fetch(buildProjectUrl('/cards'), {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -827,7 +1052,7 @@ if (editForm) {
         }
         
         try {
-            const response = await fetch(`${API_URL}/cards/${cardId}`, {
+            const response = await fetch(buildProjectUrl(`/cards/${cardId}`), {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json'
@@ -887,12 +1112,12 @@ document.addEventListener('DOMContentLoaded', function() {
     // 1. 전역 변수 초기화
     currentView = 'week';
     currentDate = new Date();
-    
-    // 2. 카드 로드 (renderCalendar 포함)
-    loadCards();
-    
-    // 3. 이벤트 리스너 설정
+
+    // 2. 이벤트 리스너 설정
     setupEventListeners();
+
+    // 3. 프로젝트 인증 및 카드 로드
+    initProjectGate();
     
     console.log('✅ 초기화 완료');
 });

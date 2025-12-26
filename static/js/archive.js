@@ -1,8 +1,227 @@
 // ========== 보관함 전용 JavaScript ==========
+const API_URL = `${window.location.protocol}//${window.location.hostname}:5001/api`;
+const PROJECT_STORAGE_KEY = 'kanban.project';
+let currentProject = null;
+let projectGateEventsBound = false;
+let previousProject = null;
+
+function buildProjectUrl(path) {
+    const url = new URL(`${API_URL}${path}`);
+    if (currentProject && currentProject.id) {
+        url.searchParams.set('project_id', currentProject.id);
+    }
+    return url.toString();
+}
+
+function readStoredProject() {
+    const raw = sessionStorage.getItem(PROJECT_STORAGE_KEY);
+    if (!raw) {
+        return null;
+    }
+    try {
+        return JSON.parse(raw);
+    } catch (error) {
+        console.warn('저장된 프로젝트 정보를 파싱할 수 없습니다:', error);
+        return null;
+    }
+}
+
+function updateProjectBadge() {
+    const badge = document.getElementById('currentProjectBadge');
+    if (!badge) {
+        return;
+    }
+    if (currentProject && currentProject.name) {
+        badge.textContent = `프로젝트: ${currentProject.name}`;
+    } else {
+        badge.textContent = '프로젝트 선택 필요';
+    }
+}
+
+function setCurrentProject(project) {
+    currentProject = project;
+    sessionStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(project));
+    updateProjectBadge();
+    const gate = document.getElementById('projectGate');
+    if (gate) {
+        gate.classList.add('hidden');
+    }
+}
+
+async function openProjectGate() {
+    previousProject = readStoredProject();
+    currentProject = null;
+    sessionStorage.removeItem(PROJECT_STORAGE_KEY);
+    updateProjectBadge();
+
+    const gate = document.getElementById('projectGate');
+    if (!gate) {
+        return;
+    }
+
+    gate.classList.remove('hidden');
+    const pinInput = document.getElementById('projectPin');
+    if (pinInput) {
+        pinInput.value = '';
+    }
+    await loadProjectOptions();
+}
+
+async function closeProjectGate() {
+    const gate = document.getElementById('projectGate');
+    if (!gate) {
+        return;
+    }
+
+    gate.classList.add('hidden');
+}
+
+async function loadProjectOptions() {
+    const select = document.getElementById('projectSelect');
+    const errorEl = document.getElementById('projectError');
+    if (!select) {
+        return;
+    }
+    select.innerHTML = '';
+    if (errorEl) {
+        errorEl.textContent = '';
+    }
+
+    try {
+        const response = await fetch(`${API_URL}/projects`);
+        const projects = await response.json();
+
+        if (!projects.length) {
+            if (errorEl) {
+                errorEl.textContent = '등록된 프로젝트가 없습니다.';
+            }
+            return;
+        }
+
+        projects.forEach(project => {
+            const option = document.createElement('option');
+            option.value = project.id;
+            option.textContent = project.name;
+            select.appendChild(option);
+        });
+    } catch (error) {
+        console.error('프로젝트 목록 로드 실패:', error);
+        if (errorEl) {
+            errorEl.textContent = '프로젝트 목록을 불러오지 못했습니다.';
+        }
+    }
+}
+
+async function verifyProjectAccess() {
+    const select = document.getElementById('projectSelect');
+    const pinInput = document.getElementById('projectPin');
+    const errorEl = document.getElementById('projectError');
+    if (!select || !pinInput) {
+        return;
+    }
+
+    if (errorEl) {
+        errorEl.textContent = '';
+    }
+
+    const projectId = select.value;
+    const pin = pinInput.value.trim();
+
+    if (!projectId) {
+        if (errorEl) {
+            errorEl.textContent = '프로젝트를 선택하세요.';
+        }
+        return;
+    }
+
+    if (!/^\d{4}$/.test(pin)) {
+        if (errorEl) {
+            errorEl.textContent = '비밀번호는 4자리 숫자여야 합니다.';
+        }
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_URL}/projects/verify`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ project_id: projectId, pin })
+        });
+
+        if (!response.ok) {
+            if (errorEl) {
+                errorEl.textContent = '비밀번호가 일치하지 않습니다.';
+            }
+            return;
+        }
+
+        const result = await response.json();
+        setCurrentProject(result.project);
+        pinInput.value = '';
+        await loadArchivedCards();
+    } catch (error) {
+        console.error('프로젝트 인증 실패:', error);
+        if (errorEl) {
+            errorEl.textContent = '프로젝트 인증에 실패했습니다.';
+        }
+    }
+}
+
+function bindProjectGateEvents() {
+    if (projectGateEventsBound) {
+        return;
+    }
+
+    const enterBtn = document.getElementById('projectEnterBtn');
+    const pinInput = document.getElementById('projectPin');
+    const closeBtn = document.getElementById('projectGateClose');
+    if (enterBtn) {
+        enterBtn.onclick = verifyProjectAccess;
+    }
+    if (pinInput) {
+        pinInput.onkeydown = (event) => {
+            if (event.key === 'Enter') {
+                verifyProjectAccess();
+            }
+        };
+    }
+    if (closeBtn) {
+        closeBtn.onclick = closeProjectGate;
+    }
+
+    projectGateEventsBound = true;
+}
+
+async function initProjectGate() {
+    const gate = document.getElementById('projectGate');
+    currentProject = readStoredProject();
+    updateProjectBadge();
+
+    if (!gate) {
+        if (currentProject) {
+            await loadArchivedCards();
+        }
+        return;
+    }
+
+    if (currentProject) {
+        gate.classList.add('hidden');
+        await loadArchivedCards();
+    } else {
+        await loadProjectOptions();
+    }
+
+    bindProjectGateEvents();
+}
 
 // 페이지 로드 시
 document.addEventListener('DOMContentLoaded', function() {
-    loadArchivedCards();
+    initProjectGate();
+
+    const switchProjectBtn = document.getElementById('switchProjectBtn');
+    if (switchProjectBtn) {
+        switchProjectBtn.addEventListener('click', openProjectGate);
+    }
     
     // 모달 닫기
     const closeBtn = document.getElementById('closeDetail');
@@ -21,7 +240,10 @@ document.addEventListener('DOMContentLoaded', function() {
 // 보관된 카드 로드
 async function loadArchivedCards() {
     try {
-        const response = await fetch('/api/cards');
+        if (!currentProject || !currentProject.id) {
+            return;
+        }
+        const response = await fetch(buildProjectUrl('/cards'));
         const cards = await response.json();
         
         const archiveGrid = document.getElementById('archiveGrid');
@@ -146,7 +368,7 @@ async function restoreCard(cardId) {
     }
     
     try {
-        const response = await fetch(`/api/cards/${cardId}`, {
+        const response = await fetch(buildProjectUrl(`/cards/${cardId}`), {
             method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json'
@@ -172,7 +394,7 @@ async function deleteCard(cardId) {
     }
     
     try {
-        const response = await fetch(`/api/cards/${cardId}`, {
+        const response = await fetch(buildProjectUrl(`/cards/${cardId}`), {
             method: 'DELETE'
         });
         
